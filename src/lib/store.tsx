@@ -35,7 +35,7 @@ interface AdminContextType {
   loginWithUser: (user: AdminUser, token?: string) => void;
   logout: () => void;
   switchUser: (userId: string) => void;
-  refreshBackendData: () => Promise<void>;
+  refreshBackendData: (force?: boolean) => Promise<void>;
 
   // Permissions
   isAdmin: boolean;
@@ -88,6 +88,9 @@ interface AdminContextType {
 
 const AdminContext = createContext<AdminContextType | undefined>(undefined);
 
+// Cache validity duration (5 minutes) to protect database from method overload & resource exhaustion
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
 const STORAGE_KEYS = {
   USER: 'bdai_admin_user',
   USERS: 'bdai_admin_users',
@@ -97,6 +100,7 @@ const STORAGE_KEYS = {
   OBJECTIVES: 'bdai_admin_objectives',
   ACTIVITIES: 'bdai_admin_activities',
   ADMIN_PROVISIONING: 'bdai_admin_provisioning_policy',
+  CACHE_TIMESTAMP: 'bdai_admin_cache_timestamp',
 };
 
 // Normalization helpers between Rust snake_case and frontend models
@@ -239,8 +243,27 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(updated));
   };
 
-  // Sync data from live Rust Backend / Supabase PostgreSQL
-  const refreshBackendData = useCallback(async () => {
+  // Sync data from live Rust Backend / Supabase PostgreSQL with smart caching
+  const refreshBackendData = useCallback(async (force = false) => {
+    // If not forced and local cache is populated and fresh, do NOT exhaust the database with extra calls
+    if (!force && typeof window !== 'undefined') {
+      try {
+        const lastSync = localStorage.getItem(STORAGE_KEYS.CACHE_TIMESTAMP);
+        const hasCachedTeam = localStorage.getItem(STORAGE_KEYS.TEAM);
+        const hasCachedNews = localStorage.getItem(STORAGE_KEYS.NEWS);
+        if (hasCachedTeam && hasCachedNews && lastSync) {
+          const age = Date.now() - Number(lastSync);
+          if (age < CACHE_TTL_MS) {
+            // Cache is fresh: avoid redundant method calls to Supabase
+            setIsLiveBackend(true);
+            return;
+          }
+        }
+      } catch {
+        // Fall through to network on storage access error
+      }
+    }
+
     try {
       const [teamRes, newsRes, vacRes, objRes] = await Promise.allSettled([
         api.getTeam(),
@@ -305,6 +328,12 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
           setActivities(normalized);
           localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(normalized));
         }
+      }
+
+      if (backendActive && typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(STORAGE_KEYS.CACHE_TIMESTAMP, Date.now().toString());
+        } catch {}
       }
 
       setIsLiveBackend(backendActive);

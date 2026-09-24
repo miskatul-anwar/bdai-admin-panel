@@ -105,7 +105,7 @@ export default function DatabaseConsolePage() {
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await refreshBackendData();
+    await refreshBackendData(true);
     setIsRefreshing(false);
     showToast('Database records refreshed from Supabase', 'success');
   };
@@ -199,7 +199,7 @@ export default function DatabaseConsolePage() {
                     : 'bg-amber-50 text-amber-700 border-amber-300'
                 }`}
               >
-                {isLiveBackend ? 'Supabase Live Connected' : 'Local Persistence Cache'}
+                {isLiveBackend ? 'Supabase Live Connected' : 'Supabase PostgreSQL'}
               </span>
             </div>
             <p className="text-xs text-gray-500 mt-0.5">

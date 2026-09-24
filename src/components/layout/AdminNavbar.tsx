@@ -16,7 +16,6 @@ import {
   LogOut,
   Menu,
   X,
-  RotateCcw,
   ChevronDown,
   UserCheck,
   Database,
@@ -36,7 +35,7 @@ const NAV_ITEMS = [
 
 export default function AdminNavbar() {
   const pathname = usePathname();
-  const { user, users, switchUser, logout, resetToDemoData, isLiveBackend, refreshBackendData } = useAdmin();
+  const { user, users, switchUser, logout } = useAdmin();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -107,40 +106,6 @@ export default function AdminNavbar() {
 
         {/* Right side items */}
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
-          {/* Database Live Sync Status */}
-          <button
-            onClick={() => refreshBackendData()}
-            title={
-              isLiveBackend
-                ? 'Connected to Supabase PostgreSQL via Rust Backend. Click to refresh.'
-                : 'Backend unreachable. Operating on local cache. Click to retry connection.'
-            }
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full border transition-all cursor-pointer ${
-              isLiveBackend
-                ? 'bg-emerald-500/20 border-emerald-400/40 text-emerald-200 hover:bg-emerald-500/30'
-                : 'bg-amber-500/20 border-amber-400/40 text-amber-200 hover:bg-amber-500/30'
-            }`}
-          >
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                isLiveBackend ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
-              }`}
-            />
-            <span>{isLiveBackend ? 'Supabase Live' : 'Local Cache'}</span>
-          </button>
-          {/* Quick reset */}
-          <button
-            onClick={() => {
-              if (window.confirm('Reset all demo data back to default BDAI data?')) {
-                resetToDemoData();
-              }
-            }}
-            title="Reset to default demo data"
-            className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-colors cursor-pointer"
-          >
-            <RotateCcw className="w-3 h-3" />
-            <span>Reset</span>
-          </button>
 
           {/* Live site link */}
           <a
