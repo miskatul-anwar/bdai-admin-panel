@@ -389,18 +389,6 @@ export default function UserManagementPage() {
                     {/* Actions */}
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {/* Switch profile button for demo */}
-                        {!isCurrentUser && (
-                          <button
-                            onClick={() => switchUser(u.id)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:text-[#0c2461] bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
-                            title={`Switch session to ${u.name}`}
-                          >
-                            <LogIn className="w-3 h-3" />
-                            <span>Switch</span>
-                          </button>
-                        )}
-
                         {isAdmin ? (
                           <>
                             <button

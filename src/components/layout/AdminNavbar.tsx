@@ -159,49 +159,14 @@ export default function AdminNavbar() {
                   <p className="text-xs text-gray-500 truncate">{user?.email}</p>
                 </div>
 
-                <div className="px-4 py-2">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-[#0c2461] mb-1.5">
-                    Switch Active Role
-                  </p>
-                  <div className="space-y-1">
-                    {users.slice(0, 5).map((u) => (
-                      <button
-                        key={u.id}
-                        onClick={() => {
-                          switchUser(u.id);
-                          setUserDropdownOpen(false);
-                        }}
-                        className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
-                          user?.id === u.id
-                            ? 'bg-blue-50 text-[#0c2461] font-bold'
-                            : 'hover:bg-slate-50 text-slate-700'
-                        }`}
-                      >
-                        <span className="truncate max-w-[140px] text-left">{u.name}</span>
-                        <span
-                          className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
-                            u.role === 'Admin'
-                              ? 'bg-[#0c2461] text-white'
-                              : u.role === 'Moderator'
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-slate-600 text-white'
-                          }`}
-                        >
-                          {u.role}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="border-t border-gray-100 pt-1">
+                <div className="pt-1">
                   <Link
                     href="/dashboard/users"
                     onClick={() => setUserDropdownOpen(false)}
                     className="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50"
                   >
                     <ShieldCheck className="w-3.5 h-3.5 text-[#0c2461]" />
-                    <span>Manage All Users</span>
+                    <span>Manage Users</span>
                   </Link>
 
                   <button

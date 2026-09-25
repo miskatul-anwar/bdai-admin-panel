@@ -63,6 +63,7 @@ interface Toast {
 interface AdminContextType {
   user: AdminUser | null;
   isAuthenticated: boolean;
+  isInitialized: boolean;
   isLiveBackend: boolean;
   login: (asRoleOrEmail?: string) => void;
   loginWithUser: (user: AdminUser, token?: string) => void;
@@ -259,6 +260,20 @@ function normalizeUser(u: any): AdminUser {
   };
 }
 
+function isTokenExpired(token: string): boolean {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return false;
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    if (typeof payload.exp === 'number') {
+      return payload.exp * 1000 <= Date.now();
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 export const AdminProvider = ({ children }: { children: ReactNode }) => {
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<AdminUser | null>(null);
@@ -278,14 +293,34 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     try {
       const storedUsers = localStorage.getItem(STORAGE_KEYS.USERS);
-      if (storedUsers) setUsers(JSON.parse(storedUsers));
+      if (storedUsers) {
+        const parsed = JSON.parse(storedUsers);
+        // If old mock accounts exist in localStorage, reset to registered accounts only
+        if (Array.isArray(parsed) && parsed.some((u: any) => u.id?.startsWith('usr_admin_2') || u.id?.startsWith('usr_mod_'))) {
+          setUsers(INITIAL_USERS);
+          localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(INITIAL_USERS));
+        } else {
+          setUsers(parsed);
+        }
+      }
 
       const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
+      const storedToken = localStorage.getItem('bdai_auth_token');
       if (storedUser) {
-        try {
-          setUser(JSON.parse(storedUser));
-        } catch {
+        if (storedToken && isTokenExpired(storedToken)) {
+          console.warn('JWT session expired. Clearing authentication state.');
+          localStorage.removeItem(STORAGE_KEYS.USER);
+          localStorage.removeItem('bdai_auth_token');
+          deleteCookie('bdai_user_session');
+          deleteCookie('bdai_access_token');
+          deleteCookie('access_token');
           setUser(null);
+        } else {
+          try {
+            setUser(JSON.parse(storedUser));
+          } catch {
+            setUser(null);
+          }
         }
       }
 
@@ -1055,6 +1090,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
       value={{
         user,
         isAuthenticated: !!user,
+        isInitialized: mounted,
         isLiveBackend,
         login,
         loginWithUser,

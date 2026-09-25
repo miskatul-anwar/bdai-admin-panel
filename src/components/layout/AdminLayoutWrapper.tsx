@@ -11,21 +11,27 @@ import Image from 'next/image';
 export default function AdminLayoutWrapper({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated } = useAdmin();
+  const { isAuthenticated, isInitialized } = useAdmin();
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
+    if (!isInitialized) return;
+
     if (pathname === '/login') {
-      setCheckingAuth(false);
+      if (isAuthenticated) {
+        router.replace('/dashboard');
+      } else {
+        setCheckingAuth(false);
+      }
       return;
     }
 
     if (!isAuthenticated) {
-      router.push('/login');
+      router.replace('/login');
     } else {
       setCheckingAuth(false);
     }
-  }, [isAuthenticated, pathname, router]);
+  }, [isAuthenticated, isInitialized, pathname, router]);
 
   // Don't wrap login page with Navbar / Footer
   if (pathname === '/login') {
@@ -37,7 +43,7 @@ export default function AdminLayoutWrapper({ children }: { children: React.React
     );
   }
 
-  if (checkingAuth && !isAuthenticated) {
+  if (!isInitialized || (checkingAuth && !isAuthenticated)) {
     return (
       <div className="min-h-screen bg-[#07101f] flex flex-col items-center justify-center text-white">
         <div className="w-12 h-12 rounded-xl bg-[#0c2461] border border-blue-500/30 flex items-center justify-center animate-pulse">
