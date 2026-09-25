@@ -3,6 +3,8 @@
 import React, { useState, useRef } from 'react';
 import { UploadCloud, Image as ImageIcon, CheckCircle2, AlertCircle, Loader2, X, Link as LinkIcon } from 'lucide-react';
 
+import { API_BASE_URL } from '@/lib/api';
+
 interface ImageUploadProps {
   value: string;
   onChange: (url: string) => void;
@@ -47,9 +49,14 @@ export default function ImageUpload({
       formData.append('file', file);
       formData.append('folder', folder);
 
+      const token = typeof window !== 'undefined' ? localStorage.getItem('bdai_auth_token') : null;
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       // Attempt upload to Rust Backend Cloudinary endpoint
-      const res = await fetch('http://localhost:8080/api/upload', {
+      const res = await fetch(`${API_BASE_URL}/upload`, {
         method: 'POST',
+        headers,
         body: formData,
       });
 
