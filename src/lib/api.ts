@@ -211,4 +211,22 @@ export const api = {
     apiRequest<any>(`/partners/${id}`, {
       method: 'DELETE',
     }),
+
+  // Showcase Tools & Platforms
+  getTools: () => apiRequest<any[]>('/tools'),
+  getTool: (id: string) => apiRequest<any>(`/tools/${id}`),
+  createTool: (toolData: any) =>
+    apiRequest<any>('/tools', {
+      method: 'POST',
+      body: JSON.stringify(toolData),
+    }),
+  updateTool: (id: string, toolData: any) =>
+    apiRequest<any>(`/tools/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(toolData),
+    }),
+  deleteTool: (id: string) =>
+    apiRequest<any>(`/tools/${id}`, {
+      method: 'DELETE',
+    }),
 };

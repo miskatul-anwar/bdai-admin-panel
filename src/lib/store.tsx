@@ -9,6 +9,7 @@ import {
   AdminUser,
   UserRole,
   ActivityLog,
+  Tool,
 } from '@/types';
 import {
   DEMO_ADMIN_USER,
@@ -18,6 +19,7 @@ import {
   INITIAL_VACANCIES,
   INITIAL_OBJECTIVES,
   INITIAL_ACTIVITIES,
+  INITIAL_TOOLS,
 } from './demo-data';
 import {
   dbGetTeam,
@@ -44,6 +46,10 @@ import {
   dbLogActivity,
   dbGetSettings,
   dbUpdateSetting,
+  dbGetTools,
+  dbAddTool,
+  dbUpdateTool,
+  dbDeleteTool,
 } from './supabase-db';
 import { setCookie, deleteCookie } from './cookies';
 import { api } from './api';
@@ -104,6 +110,12 @@ interface AdminContextType {
   updateObjective: (id: string, item: Partial<ResearchObjective>) => Promise<void>;
   deleteObjective: (id: string) => Promise<void>;
 
+  // Showcase Tools CRUD
+  tools: Tool[];
+  addTool: (item: Omit<Tool, 'id'>) => Promise<void>;
+  updateTool: (id: string, item: Partial<Tool>) => Promise<void>;
+  deleteTool: (id: string) => Promise<void>;
+
   activities: ActivityLog[];
   resetToDemoData: () => void;
 
@@ -128,11 +140,33 @@ const STORAGE_KEYS = {
   NEWS: 'bdai_admin_news',
   VACANCIES: 'bdai_admin_vacancies',
   OBJECTIVES: 'bdai_admin_objectives',
+  TOOLS: 'bdai_admin_tools',
   ACTIVITIES: 'bdai_admin_activities',
   SETTINGS: 'bdai_admin_site_settings',
   ADMIN_PROVISIONING: 'bdai_admin_provisioning_policy',
   CACHE_TIMESTAMP: 'bdai_admin_cache_timestamp',
 };
+
+function normalizeTool(t: any): Tool {
+  return {
+    id: t.id,
+    title: t.title,
+    subtitle: t.subtitle || '',
+    description: t.description || '',
+    abstract: t.abstract || t.abstract_text || '',
+    paperUrl: t.paperUrl || t.paper_url || '',
+    sourceUrl: t.sourceUrl || t.source_url || '',
+    platformUrl: t.platformUrl || t.platform_url || '',
+    videoUrl: t.videoUrl || t.video_url || '',
+    imageUrl: t.imageUrl || t.image_url || '',
+    authors: t.authors || '',
+    features: Array.isArray(t.features) ? t.features : [],
+    order: t.order ?? t.display_order ?? 0,
+    badge: t.badge || 'Tool Showcase',
+    createdAt: t.createdAt || t.created_at,
+    updatedAt: t.updatedAt || t.updated_at,
+  };
+}
 
 // Normalization helpers between Rust snake_case and frontend models
 function normalizeTeamMember(m: any): TeamMember {
@@ -233,6 +267,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
   const [news, setNews] = useState<NewsArticle[]>(INITIAL_NEWS);
   const [vacancies, setVacancies] = useState<Vacancy[]>(INITIAL_VACANCIES);
   const [objectives, setObjectives] = useState<ResearchObjective[]>(INITIAL_OBJECTIVES);
+  const [tools, setTools] = useState<Tool[]>(INITIAL_TOOLS);
   const [activities, setActivities] = useState<ActivityLog[]>(INITIAL_ACTIVITIES);
   const [settings, setSettings] = useState<Record<string, any>>({});
   const [adminOnlyProvisioning, setAdminOnlyProvisioning] = useState<boolean>(true);
@@ -265,6 +300,9 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
 
       const storedObjectives = localStorage.getItem(STORAGE_KEYS.OBJECTIVES);
       if (storedObjectives) setObjectives(JSON.parse(storedObjectives));
+
+      const storedTools = localStorage.getItem(STORAGE_KEYS.TOOLS);
+      if (storedTools) setTools(JSON.parse(storedTools));
 
       const storedActivities = localStorage.getItem(STORAGE_KEYS.ACTIVITIES);
       if (storedActivities) setActivities(JSON.parse(storedActivities));
@@ -329,7 +367,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      const [teamRes, newsRes, vacRes, objRes, usersRes, actRes, settingsRes] = await Promise.allSettled([
+      const [teamRes, newsRes, vacRes, objRes, usersRes, actRes, settingsRes, toolsRes] = await Promise.allSettled([
         dbGetTeam(),
         dbGetNews(),
         dbGetVacancies(),
@@ -337,6 +375,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
         dbGetUsers(),
         dbGetActivities(),
         dbGetSettings(),
+        dbGetTools(),
       ]);
 
       let backendActive = false;
@@ -365,6 +404,13 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
       if (objRes.status === 'fulfilled' && Array.isArray(objRes.value)) {
         setObjectives(objRes.value as any);
         localStorage.setItem(STORAGE_KEYS.OBJECTIVES, JSON.stringify(objRes.value));
+        backendActive = true;
+      }
+
+      if (toolsRes.status === 'fulfilled' && Array.isArray(toolsRes.value) && toolsRes.value.length > 0) {
+        const normalized = toolsRes.value.map(normalizeTool);
+        setTools(normalized);
+        localStorage.setItem(STORAGE_KEYS.TOOLS, JSON.stringify(normalized));
         backendActive = true;
       }
 
@@ -857,6 +903,111 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     recordActivity('Deleted Milestone', 'Objective', id);
   };
 
+  // Tools CRUD
+  const addTool = async (toolData: Omit<Tool, 'id'>) => {
+    if (!canEdit) {
+      showToast('Only Admins and Moderators can add showcase tools', 'error');
+      return;
+    }
+    const slug =
+      toolData.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '') || ('tool_' + Date.now());
+
+    const optimisticTool: Tool = {
+      ...toolData,
+      id: slug,
+      features: toolData.features || [],
+      order: toolData.order ?? tools.length + 1,
+      badge: toolData.badge || 'Tool Showcase',
+    };
+
+    setTools((prev) => [...prev, optimisticTool].sort((a, b) => a.order - b.order));
+
+    try {
+      await dbAddTool(
+        {
+          id: slug,
+          title: toolData.title,
+          subtitle: toolData.subtitle,
+          description: toolData.description,
+          abstract_text: toolData.abstract,
+          paper_url: toolData.paperUrl,
+          source_url: toolData.sourceUrl,
+          platform_url: toolData.platformUrl,
+          video_url: toolData.videoUrl,
+          image_url: toolData.imageUrl,
+          authors: toolData.authors,
+          features: toolData.features,
+          display_order: toolData.order,
+          badge: toolData.badge,
+        },
+        user?.name || 'Admin'
+      );
+      showToast(`Added tool "${toolData.title}" (synced to database)`, 'success');
+    } catch {
+      showToast(`Added tool "${toolData.title}" (cached locally)`, 'info');
+    }
+    recordActivity('Added Tool', 'Tool', toolData.title);
+  };
+
+  const updateTool = async (id: string, toolData: Partial<Tool>) => {
+    if (!canEdit) {
+      showToast('Only Admins and Moderators can edit showcase tools', 'error');
+      return;
+    }
+    setTools((prev) =>
+      prev
+        .map((t) => (t.id === id ? { ...t, ...toolData } : t))
+        .sort((a, b) => a.order - b.order)
+    );
+
+    try {
+      await dbUpdateTool(
+        id,
+        {
+          title: toolData.title,
+          subtitle: toolData.subtitle,
+          description: toolData.description,
+          abstract_text: toolData.abstract,
+          paper_url: toolData.paperUrl,
+          source_url: toolData.sourceUrl,
+          platform_url: toolData.platformUrl,
+          video_url: toolData.videoUrl,
+          image_url: toolData.imageUrl,
+          authors: toolData.authors,
+          features: toolData.features,
+          display_order: toolData.order,
+          badge: toolData.badge,
+        },
+        user?.name || 'Admin'
+      );
+      showToast(`Updated tool "${toolData.title || id}" (synced to database)`, 'success');
+    } catch {
+      showToast(`Updated tool "${toolData.title || id}" (cached locally)`, 'info');
+    }
+    recordActivity('Updated Tool', 'Tool', toolData.title || id);
+  };
+
+  const deleteTool = async (id: string) => {
+    if (!canDelete) {
+      showToast('Only Admins can delete showcase tools', 'error');
+      return;
+    }
+    const target = tools.find((t) => t.id === id);
+    setTools((prev) => prev.filter((t) => t.id !== id));
+
+    try {
+      await dbDeleteTool(id, user?.name || 'Admin');
+      showToast(`Tool "${target?.title || id}" deleted from database`, 'info');
+    } catch {
+      showToast(`Tool "${target?.title || id}" deleted locally`, 'info');
+    }
+    recordActivity('Deleted Tool', 'Tool', target?.title || id);
+  };
+
   const updateSiteSetting = async (id: string, data: any) => {
     try {
       await dbUpdateSetting(id, data, user?.name || 'Admin');
@@ -882,6 +1033,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setNews(INITIAL_NEWS);
     setVacancies(INITIAL_VACANCIES);
     setObjectives(INITIAL_OBJECTIVES);
+    setTools(INITIAL_TOOLS);
     setActivities(INITIAL_ACTIVITIES);
     setAdminOnlyProvisioning(true);
 
@@ -891,6 +1043,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem(STORAGE_KEYS.NEWS, JSON.stringify(INITIAL_NEWS));
     localStorage.setItem(STORAGE_KEYS.VACANCIES, JSON.stringify(INITIAL_VACANCIES));
     localStorage.setItem(STORAGE_KEYS.OBJECTIVES, JSON.stringify(INITIAL_OBJECTIVES));
+    localStorage.setItem(STORAGE_KEYS.TOOLS, JSON.stringify(INITIAL_TOOLS));
     localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(INITIAL_ACTIVITIES));
     localStorage.setItem(STORAGE_KEYS.ADMIN_PROVISIONING, JSON.stringify(true));
 
@@ -942,6 +1095,11 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
         addObjective,
         updateObjective,
         deleteObjective,
+
+        tools,
+        addTool,
+        updateTool,
+        deleteTool,
 
         activities,
         resetToDemoData,

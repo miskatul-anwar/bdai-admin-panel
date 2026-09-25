@@ -444,3 +444,64 @@ export async function dbAuthenticate(usernameOrEmail: string, password: string):
   const { password_hash, ...safeUser } = data;
   return safeUser as DbUser;
 }
+
+// ==========================================
+// Showcase Tools & Platforms
+// ==========================================
+
+export interface DbTool {
+  id: string;
+  title: string;
+  subtitle?: string;
+  description: string;
+  abstract_text?: string;
+  paper_url?: string;
+  source_url?: string;
+  platform_url?: string;
+  video_url?: string;
+  image_url?: string;
+  authors?: string;
+  features?: string[];
+  display_order?: number;
+  badge?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export async function dbGetTools(): Promise<DbTool[]> {
+  const { data, error } = await supabase
+    .from('site_settings')
+    .select('data')
+    .eq('id', 'tools')
+    .maybeSingle();
+
+  if (error || !data) return [];
+  const list = Array.isArray(data.data) ? data.data : [];
+  list.sort((a: DbTool, b: DbTool) => (a.display_order ?? 0) - (b.display_order ?? 0));
+  return list;
+}
+
+export async function dbAddTool(tool: DbTool, userName: string = 'Admin'): Promise<DbTool[]> {
+  const current = await dbGetTools();
+  const updated = [...current, tool];
+  await dbUpdateSetting('tools', updated, userName);
+  await dbLogActivity('Added Tool', 'Tool', tool.title, userName);
+  return updated;
+}
+
+export async function dbUpdateTool(id: string, toolData: Partial<DbTool>, userName: string = 'Admin'): Promise<DbTool[]> {
+  const current = await dbGetTools();
+  const updated = current.map((t) => (t.id === id ? { ...t, ...toolData, updated_at: new Date().toISOString() } : t));
+  await dbUpdateSetting('tools', updated, userName);
+  await dbLogActivity('Updated Tool', 'Tool', toolData.title || id, userName);
+  return updated;
+}
+
+export async function dbDeleteTool(id: string, userName: string = 'Admin'): Promise<DbTool[]> {
+  const current = await dbGetTools();
+  const toolToDelete = current.find((t) => t.id === id);
+  const updated = current.filter((t) => t.id !== id);
+  await dbUpdateSetting('tools', updated, userName);
+  await dbLogActivity('Deleted Tool', 'Tool', toolToDelete?.title || id, userName);
+  return updated;
+}

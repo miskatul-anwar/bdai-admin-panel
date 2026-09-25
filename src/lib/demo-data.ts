@@ -1,4 +1,4 @@
-import { TeamMember, NewsArticle, Vacancy, ResearchObjective, AdminUser, ActivityLog } from '@/types';
+import { TeamMember, NewsArticle, Vacancy, ResearchObjective, AdminUser, ActivityLog, Tool } from '@/types';
 
 export const INITIAL_USERS: AdminUser[] = [
   // Admins
@@ -514,5 +514,27 @@ export const INITIAL_ACTIVITIES: ActivityLog[] = [
     targetName: 'Atik Ishrak (Research Assistant)',
     timestamp: '2 days ago',
     user: 'Miskatul Anwar',
+  }
+];
+
+export const INITIAL_TOOLS: Tool[] = [
+  {
+    id: 'setlbi',
+    title: 'SETLBI',
+    subtitle: 'An Integrated Platform for Semantic Business Intelligence',
+    description: 'A tool that combines Semantic Web and Business Intelligence technologies to define, process, integrate, and query semantic data.',
+    abstract: 'With the growing popularity of Semantic Web technologies, more and more organizations natively manage data using Semantic Web standards, in particular RDF. This development gives rise to new requirements for Business Intelligence tools to enable analyses in the style of On-Line Analytical Processing (OLAP) over RDF data. SETLBI brings together the Semantic Web and Business Intelligence technologies across target definition, source to target mappings, source extraction, data transformation, and target population.',
+    paperUrl: 'https://extbi.cs.aau.dk/SETLBI/SETLBI.pdf',
+    sourceUrl: 'https://github.com/bi-setl/SETL',
+    platformUrl: 'https://extbi.cs.aau.dk/SETLBI/index.php',
+    videoUrl: 'https://www.youtube.com/embed/9-a4MVHqZow',
+    authors: 'Rudra Pratap Deb Nath, Katja Hose, Torben Bach Pedersen, Oscar Romero, and Amrit Bhattacharjee',
+    features: [
+      'Semantic integration',
+      'RDF + OLAP workflows',
+      'End-to-end data pipeline'
+    ],
+    order: 1,
+    badge: 'Tool Showcase'
   }
 ];

@@ -84,3 +84,22 @@ export interface ActivityLog {
   timestamp: string;
   user: string;
 }
+
+export interface Tool {
+  id: string;
+  title: string;
+  subtitle?: string;
+  description: string;
+  abstract?: string;
+  paperUrl?: string;
+  sourceUrl?: string;
+  platformUrl?: string;
+  videoUrl?: string;
+  imageUrl?: string;
+  authors?: string;
+  features?: string[];
+  order: number;
+  badge?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
