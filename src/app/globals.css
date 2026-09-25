@@ -17,13 +17,7 @@
 }
 
 :root {
-  --admin-nav-height: 56px;
-}
-
-@media (max-width: 1399px) {
-  :root {
-    --admin-nav-height: 98px;
-  }
+  --admin-nav-height: 130px;
 }
 
 @layer base {

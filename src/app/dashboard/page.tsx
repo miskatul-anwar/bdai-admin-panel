@@ -66,16 +66,13 @@ export default function DashboardOverviewPage() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[10px] font-black uppercase tracking-widest text-blue-300 bg-blue-500/20 px-2 py-0.5 rounded border border-blue-400/30">
-                  Active Role: {user?.role || 'Admin'}
-                </span>
                 <span className="text-xs text-slate-400 font-medium">
-                  Welcome, {user?.name}
+                  Welcome back, {user?.name || 'Miskat'}
                 </span>
               </div>
               <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-white m-0">
                 BD<span className="text-blue-400">AI</span>{' '}
-                <span className="text-slate-400 text-xl sm:text-2xl font-normal">| Admin Console</span>
+                <span className="text-slate-400 text-xl sm:text-2xl font-normal">| Overview</span>
               </h1>
               <p className="text-xs sm:text-sm text-slate-400 mt-2 max-w-2xl leading-relaxed">
                 Leveraging <span className="text-blue-400 font-bold">B</span>angla<span className="text-blue-400 font-bold">D</span>esh Sectoral Knowledge Graphs and Large Language Models for <span className="text-blue-400 font-bold">A</span>rtificial <span className="text-blue-400 font-bold">I</span>ntelligence Driven Insights.
@@ -232,9 +229,6 @@ export default function DashboardOverviewPage() {
                 <Clock className="w-5 h-5 text-[#0c2461]" />
                 Recent Activity
               </h2>
-              <span className="text-[10px] font-black uppercase tracking-widest text-white bg-[#0c2461] rounded px-2 py-0.5">
-                Live
-              </span>
             </div>
 
             <div className="space-y-4">

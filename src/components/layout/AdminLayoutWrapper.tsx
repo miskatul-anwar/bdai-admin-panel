@@ -56,7 +56,7 @@ export default function AdminLayoutWrapper({ children }: { children: React.React
           />
         </div>
         <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-slate-400">
-          Loading BDAI Admin Console...
+          Loading BDAI...
         </p>
       </div>
     );
@@ -67,8 +67,8 @@ export default function AdminLayoutWrapper({ children }: { children: React.React
       <AdminNavbar />
 
       <div 
-        className="flex-1 transition-[padding] duration-300 ease-in-out"
-        style={{ paddingTop: 'var(--admin-nav-height, 56px)' }}
+        className="flex-1"
+        style={{ paddingTop: 'var(--admin-nav-height, 130px)' }}
       >
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {children}

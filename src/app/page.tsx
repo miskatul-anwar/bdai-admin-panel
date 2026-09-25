@@ -29,7 +29,7 @@ export default function RootPage() {
           className="object-contain"
         />
       </div>
-      <p className="text-xs text-slate-400">Loading BDAI Admin Console...</p>
+      <p className="text-xs text-slate-400">Loading BDAI...</p>
     </div>
   );
 }

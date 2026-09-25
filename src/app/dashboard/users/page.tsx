@@ -138,14 +138,14 @@ export default function UserManagementPage() {
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-[#0c2461]">User Management</h1>
-            <p className="text-sm text-gray-500">
-              Role assignments and access control for Admins and Moderators
+            <h1 className="text-2xl md:text-3xl font-bold text-[#0c2461]">Users</h1>
+            <p className="text-xs text-gray-500">
+              Manage accounts and access permissions
             </p>
           </div>
         </div>
 
-        {isAdmin ? (
+        {isAdmin && (
           <button
             onClick={handleOpenAdd}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#0c2461] hover:bg-[#0c2461]/90 text-white font-semibold text-xs uppercase tracking-wider shadow-sm transition-colors cursor-pointer self-start sm:self-auto"
@@ -153,116 +153,7 @@ export default function UserManagementPage() {
             <Plus className="w-4 h-4" />
             <span>Add User</span>
           </button>
-        ) : (
-          <div className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium self-start sm:self-auto">
-            <ShieldAlert className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-            <span>Admin Only: Add/Remove Users</span>
-          </div>
         )}
-      </div>
-
-      {/* ── Policy Banner for Non-Admins ── */}
-      {!isAdmin && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
-          <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-xs font-bold text-amber-900">
-              Restricted User Management ({user?.role} Mode)
-            </p>
-            <p className="text-xs text-amber-700 mt-0.5">
-              By security policy, <strong>Only Admins</strong> can Add, Modify, or Remove an Admin or Moderator. You can use the &ldquo;Switch&rdquo; button to switch to an Admin account to test user creation and removal.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* ── Admin Option & Authority Policy ─────────────────────── */}
-      <div className="bg-[#0c2461] text-white rounded-2xl p-5 shadow-sm border border-blue-900 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-start gap-3.5">
-          <div className="p-2.5 rounded-xl bg-white/10 text-emerald-400 shrink-0">
-            <ShieldCheck className="w-6 h-6" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-bold text-white text-sm">
-                Administrative Authority &amp; Security Policy
-              </h3>
-              <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-                {adminOnlyProvisioning ? 'Option: Enforced' : 'Option: Relaxed'}
-              </span>
-            </div>
-            <p className="text-xs text-blue-100/80 mt-1 leading-relaxed max-w-2xl">
-              <strong>Strict Option:</strong> Only Admin can Add or Remove an <strong>Admin</strong>, <strong>Moderator</strong>, and <strong>all kinds of employees</strong>. Moderators have restricted permissions and cannot alter user accounts or employee rosters.
-            </p>
-          </div>
-        </div>
-
-        {isAdmin && (
-          <button
-            onClick={toggleAdminOnlyProvisioning}
-            className="shrink-0 flex items-center gap-2 bg-white/10 hover:bg-white/20 px-3.5 py-2 rounded-xl border border-white/10 text-xs text-white transition-colors cursor-pointer"
-            title="Toggle Admin-Only Security Option"
-          >
-            <span className="text-blue-200">Admin-Only Policy:</span>
-            <span className={`font-bold ${adminOnlyProvisioning ? 'text-emerald-300' : 'text-amber-300'}`}>
-              {adminOnlyProvisioning ? 'Enabled (Strict)' : 'Disabled'}
-            </span>
-          </button>
-        )}
-      </div>
-
-      {/* ── Role Definition Cards ──────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex items-start gap-4">
-          <div className="p-3 rounded-xl bg-[#0c2461] text-white shrink-0">
-            <ShieldAlert className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-[#0c2461] text-sm">Admins</h3>
-              <span className="text-xs font-mono font-bold text-[#0c2461] bg-slate-100 px-2 py-0.5 rounded-full">
-                {adminCount} Users
-              </span>
-            </div>
-            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-              Full system authority. Manage user accounts, wipe settings, delete records, and oversee all BDAI operations.
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex items-start gap-4">
-          <div className="p-3 rounded-xl bg-blue-600 text-white shrink-0">
-            <Shield className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-blue-600 text-sm">Moderators</h3>
-              <span className="text-xs font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-                {modCount} Users
-              </span>
-            </div>
-            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-              Operational publishing. Create and edit news, tender notices, research progress, and team profiles.
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex items-start gap-4">
-          <div className="p-3 rounded-xl bg-emerald-600 text-white shrink-0">
-            <UserCheck className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-slate-700 text-sm">Active Accounts</h3>
-              <span className="text-xs font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-                {activeCount} Users
-              </span>
-            </div>
-            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-              Active verified credentials with authorized access to the administrative console and API services.
-            </p>
-          </div>
-        </div>
       </div>
 
       {/* ── Filter and Search Bar ──────────────────────────────── */}

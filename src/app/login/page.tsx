@@ -86,7 +86,7 @@ export default function LoginPage() {
             />
           </div>
           <h1 className="text-xl font-bold tracking-tight text-white">
-            BDAI Admin Console
+            BDAI Management
           </h1>
           <p className="text-xs text-slate-400 mt-1">
             Sign in to manage portal content and resources

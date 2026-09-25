@@ -172,36 +172,16 @@ export default function TeamManagementPage() {
           </div>
         </div>
 
-        {isAdmin ? (
+        {isAdmin && (
           <button
             onClick={handleOpenAdd}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#0c2461] hover:bg-[#0c2461]/90 text-white font-semibold text-xs uppercase tracking-wider shadow-sm transition-colors cursor-pointer self-start sm:self-auto"
           >
             <Plus className="w-4 h-4" />
-            <span>Add Employee</span>
+            <span>Add Member</span>
           </button>
-        ) : (
-          <div className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium self-start sm:self-auto">
-            <ShieldAlert className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-            <span>Admin Only: Add/Remove Employees</span>
-          </div>
         )}
       </div>
-
-      {/* ── Policy Banner for Non-Admins ── */}
-      {!isAdmin && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
-          <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-xs font-bold text-amber-900">
-              Admin-Only Personnel Authority ({user?.role} Mode)
-            </p>
-            <p className="text-xs text-amber-700 mt-0.5">
-              By administrative policy, <strong>Only Admins</strong> can Add or Remove employees across any category. You can switch to an Admin account in the top navigation bar to manage employees.
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* ── Dynamic Category Filter Bar (Customizable Categories) ── */}
       <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-center">

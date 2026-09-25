@@ -7,7 +7,7 @@ export default function AdminFooter() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-2">
         <div className="text-sm font-semibold text-white/80 flex items-center gap-1.5">
           <Copyright size={14} className="inline-block" />
-          <span>BIKE 2025-2028 &bull; BDAI Admin Console</span>
+          <span>BIKE 2025-2028 &bull; BDAI</span>
         </div>
 
         <div className="text-sm text-white/70">

@@ -190,11 +190,11 @@ export default function DatabaseConsolePage() {
             <Database className="w-6 h-6" />
           </div>
             <div>
-              <h1 className="text-xl font-bold text-[#0c2461]">Direct Database Console</h1>
+              <h1 className="text-xl font-bold text-[#0c2461]">Database</h1>
               <p className="text-xs text-gray-500 mt-0.5">
-              Inspect schemas, query rows, and perform direct SQL transactions on Supabase PostgreSQL
-            </p>
-          </div>
+                Inspect tables and live records on Supabase PostgreSQL
+              </p>
+            </div>
         </div>
 
         <div className="flex items-center gap-2.5">

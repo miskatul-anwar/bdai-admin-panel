@@ -4,9 +4,8 @@ import { AdminProvider } from '@/lib/store';
 import AdminLayoutWrapper from '@/components/layout/AdminLayoutWrapper';
 
 export const metadata: Metadata = {
-  title: 'BDAI Admin Console — Management Panel',
-  description:
-    'Administrative content management console for BDAI (BanglaDesh Sectoral Knowledge Graphs and Large Language Models)',
+  title: 'BDAI — Management',
+  description: 'Management portal for BDAI laboratory',
 };
 
 export default function RootLayout({
