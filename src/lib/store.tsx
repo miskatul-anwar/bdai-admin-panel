@@ -186,6 +186,7 @@ function normalizeUser(u: any): AdminUser {
   return {
     id: u.id,
     name: u.name,
+    username: u.username || (u.email ? u.email.split('@')[0] : ''),
     email: u.email,
     role: u.role,
     avatar: u.avatar || '/team/miskat.jpg',
@@ -382,17 +383,19 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
   }, [refreshBackendData, user]);
 
   // Login handler
-  const login = (roleOrEmail = 'Admin') => {
+  const login = (roleOrUsernameOrEmail = 'Admin') => {
+    const q = roleOrUsernameOrEmail.toLowerCase();
     let matchedUser = users.find(
       (u) =>
-        u.email.toLowerCase() === roleOrEmail.toLowerCase() ||
-        u.role.toLowerCase() === roleOrEmail.toLowerCase()
+        (u.username && u.username.toLowerCase() === q) ||
+        u.email.toLowerCase() === q ||
+        u.role.toLowerCase() === q
     );
 
     if (!matchedUser) {
       matchedUser = {
         ...DEMO_ADMIN_USER,
-        role: (roleOrEmail === 'Moderator' ? 'Moderator' : 'Admin') as UserRole,
+        role: (roleOrUsernameOrEmail.toLowerCase() === 'moderator' ? 'Moderator' : 'Admin') as UserRole,
       };
     }
 
@@ -467,8 +470,9 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     try {
       const res = await dbAddUser({
         name: userData.name,
+        username: userData.username,
         email: userData.email,
-        password: 'admin123',
+        password: userData.password || 'admin123',
         role: userData.role,
         avatar: userData.avatar,
         department: userData.department,

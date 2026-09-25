@@ -51,7 +51,9 @@ export default function UserManagementPage() {
   // Form State
   const [formData, setFormData] = useState({
     name: '',
+    username: '',
     email: '',
+    password: '',
     role: 'Moderator' as UserRole,
     avatar: '/team/miskat.jpg',
     department: 'Department of CSE, University of Chittagong',
@@ -62,7 +64,9 @@ export default function UserManagementPage() {
     setEditingUser(null);
     setFormData({
       name: '',
+      username: '',
       email: '',
+      password: '',
       role: 'Moderator',
       avatar: '/team/miskat.jpg',
       department: 'Department of CSE, University of Chittagong',
@@ -75,7 +79,9 @@ export default function UserManagementPage() {
     setEditingUser(target);
     setFormData({
       name: target.name,
+      username: target.username || target.email.split('@')[0],
       email: target.email,
+      password: '',
       role: target.role,
       avatar: target.avatar,
       department: target.department,
@@ -117,6 +123,7 @@ export default function UserManagementPage() {
     const matchesRole = selectedRole === 'all' || u.role === selectedRole;
     const matchesSearch =
       u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (u.username && u.username.toLowerCase().includes(searchQuery.toLowerCase())) ||
       u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       u.department.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesRole && matchesSearch;
@@ -297,6 +304,7 @@ export default function UserManagementPage() {
             <thead className="bg-slate-50 border-b border-gray-100 text-slate-600 font-bold uppercase tracking-wider text-[10px]">
               <tr>
                 <th className="px-6 py-4">User</th>
+                <th className="px-6 py-4">Username</th>
                 <th className="px-6 py-4">Role</th>
                 <th className="px-6 py-4">Affiliation / Dept</th>
                 <th className="px-6 py-4">Status</th>
@@ -343,6 +351,13 @@ export default function UserManagementPage() {
                           <span className="text-gray-500 text-[11px] block">{u.email}</span>
                         </div>
                       </div>
+                    </td>
+
+                    {/* Username */}
+                    <td className="px-6 py-4">
+                      <span className="font-mono text-xs font-semibold text-blue-900 bg-blue-50 border border-blue-200/60 px-2 py-0.5 rounded-md">
+                        @{u.username || u.email.split('@')[0]}
+                      </span>
                     </td>
 
                     {/* Role badge */}
@@ -451,6 +466,22 @@ export default function UserManagementPage() {
 
             <div>
               <label className="block text-xs font-semibold text-[#0c2461] mb-1">
+                Username *
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.username}
+                onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase().replace(/[^a-z0-9_.-]/g, '') })}
+                className="w-full px-3 py-2 text-xs font-mono rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-[#0c2461]"
+                placeholder="e.g. nowshed, sayed, miskat"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-[#0c2461] mb-1">
                 Email Address *
               </label>
               <input
@@ -460,6 +491,20 @@ export default function UserManagementPage() {
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-[#0c2461]"
                 placeholder="name@cu.ac.bd"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[#0c2461] mb-1">
+                {editingUser ? 'New Password (leave blank to keep current)' : 'Password *'}
+              </label>
+              <input
+                type="password"
+                required={!editingUser}
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-[#0c2461]"
+                placeholder={editingUser ? '••••••••' : 'Enter login password'}
               />
             </div>
           </div>
@@ -481,27 +526,27 @@ export default function UserManagementPage() {
               </select>
             </div>
 
-            <div className="sm:col-span-2">
-              <ImageUpload
-                value={formData.avatar}
-                onChange={(url) => setFormData({ ...formData, avatar: url })}
-                label="User Avatar (Cloudinary)"
-                folder="bdai/avatars"
-                helperText="Upload profile avatar to Cloudinary CDN or specify image URL"
+            <div>
+              <label className="block text-xs font-semibold text-[#0c2461] mb-1">
+                Department / Affiliation
+              </label>
+              <input
+                type="text"
+                value={formData.department}
+                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-[#0c2461]"
+                placeholder="Dept. of CSE, University of Chittagong"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#0c2461] mb-1">
-              Department / Affiliation
-            </label>
-            <input
-              type="text"
-              value={formData.department}
-              onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-              className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-[#0c2461]"
-              placeholder="Dept. of CSE, University of Chittagong"
+            <ImageUpload
+              value={formData.avatar}
+              onChange={(url) => setFormData({ ...formData, avatar: url })}
+              label="User Avatar (Cloudinary)"
+              folder="bdai/avatars"
+              helperText="Upload profile avatar to Cloudinary CDN or specify image URL"
             />
           </div>
 

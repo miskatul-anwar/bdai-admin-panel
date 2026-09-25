@@ -66,6 +66,7 @@ export interface DbResearchObjective {
 export interface DbUser {
   id?: string;
   name: string;
+  username?: string;
   email: string;
   password?: string;
   password_hash?: string;
@@ -279,7 +280,7 @@ export async function dbDeleteObjective(id: string): Promise<void> {
 export async function dbGetUsers(): Promise<DbUser[]> {
   const { data, error } = await supabase
     .from('users')
-    .select('id, name, email, role, avatar, department, status, created_at, updated_at')
+    .select('id, name, username, email, role, avatar, department, status, created_at, updated_at')
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(error.message);
@@ -288,6 +289,7 @@ export async function dbGetUsers(): Promise<DbUser[]> {
 
 export async function dbAddUser(user: {
   name: string;
+  username?: string;
   email: string;
   password?: string;
   role: 'Admin' | 'Moderator';
@@ -296,11 +298,14 @@ export async function dbAddUser(user: {
   status?: string;
 }): Promise<DbUser> {
   const passwordHash = bcrypt.hashSync(user.password || 'admin123', 10);
+  const username = (user.username || user.email.split('@')[0]).trim().toLowerCase();
+
   const { data, error } = await supabase
     .from('users')
     .insert([
       {
         name: user.name,
+        username: username,
         email: user.email.toLowerCase().trim(),
         password_hash: passwordHash,
         role: user.role,
@@ -309,7 +314,7 @@ export async function dbAddUser(user: {
         status: user.status || 'active',
       },
     ])
-    .select('id, name, email, role, avatar, department, status, created_at, updated_at')
+    .select('id, name, username, email, role, avatar, department, status, created_at, updated_at')
     .single();
 
   if (error) throw new Error(error.message);
@@ -322,13 +327,16 @@ export async function dbUpdateUser(id: string, user: Partial<DbUser>): Promise<D
     updateData.password_hash = bcrypt.hashSync(user.password, 10);
     delete updateData.password;
   }
+  if (user.username) {
+    updateData.username = user.username.trim().toLowerCase();
+  }
   delete updateData.id;
 
   const { data, error } = await supabase
     .from('users')
     .update(updateData)
     .eq('id', id)
-    .select('id, name, email, role, avatar, department, status, created_at, updated_at')
+    .select('id, name, username, email, role, avatar, department, status, created_at, updated_at')
     .single();
 
   if (error) throw new Error(error.message);
@@ -400,23 +408,37 @@ export async function dbUpdateSetting(id: string, settingData: any, userName: st
 }
 
 // ==========================================
-// Direct DB Authentication
+// Direct DB Authentication (Username + Password)
 // ==========================================
 
-export async function dbAuthenticate(email: string, password: string): Promise<DbUser> {
-  const { data, error } = await supabase
+export async function dbAuthenticate(usernameOrEmail: string, password: string): Promise<DbUser> {
+  const clean = usernameOrEmail.trim().toLowerCase();
+
+  // Try matching by username first
+  let { data, error } = await supabase
     .from('users')
     .select('*')
-    .eq('email', email.trim().toLowerCase())
+    .ilike('username', clean)
     .maybeSingle();
 
+  // Fallback to email
+  if (!data) {
+    const res = await supabase
+      .from('users')
+      .select('*')
+      .ilike('email', clean)
+      .maybeSingle();
+    data = res.data;
+    error = res.error;
+  }
+
   if (error || !data) {
-    throw new Error('Invalid email or password');
+    throw new Error('Invalid username or password');
   }
 
   const isValid = bcrypt.compareSync(password, data.password_hash);
   if (!isValid) {
-    throw new Error('Invalid email or password');
+    throw new Error('Invalid username or password');
   }
 
   const { password_hash, ...safeUser } = data;

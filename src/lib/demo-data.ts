@@ -5,7 +5,8 @@ export const INITIAL_USERS: AdminUser[] = [
   {
     id: 'usr_admin_1',
     name: 'Miskatul Anwar',
-    email: 'miskat@std.cu.ac.bd',
+    username: 'miskat',
+    email: 'miskat.cse@cu.ac.bd',
     role: 'Admin',
     avatar: '/team/miskat.jpg',
     status: 'active',
@@ -15,6 +16,7 @@ export const INITIAL_USERS: AdminUser[] = [
   {
     id: 'usr_admin_2',
     name: 'Prof. Dr. Rudra Pratap Deb Nath',
+    username: 'rudra',
     email: 'rudra@cu.ac.bd',
     role: 'Admin',
     avatar: '/team/rpdn.png',
@@ -22,17 +24,29 @@ export const INITIAL_USERS: AdminUser[] = [
     department: 'Director, BIKE Lab & SPM',
     createdAt: '2024-09-01',
   },
-
-  // Moderators
   {
-    id: 'usr_mod_1',
+    id: 'usr_admin_3',
     name: 'Dr. Abu Nowshed Chy',
+    username: 'nowshed',
     email: 'nowshed@cu.ac.bd',
-    role: 'Moderator',
+    role: 'Admin',
     avatar: '/team/anc.png',
     status: 'active',
     department: 'CSE, University of Chittagong & ASPM',
     createdAt: '2024-09-01',
+  },
+
+  // Moderators
+  {
+    id: 'usr_mod_1',
+    name: 'Sayed Hossain',
+    username: 'sayed',
+    email: 'sayed.fellow@cu.ac.bd',
+    role: 'Moderator',
+    avatar: '/team/sayed.jpg',
+    status: 'active',
+    department: 'Fellow, CSE',
+    createdAt: '2024-10-15',
   },
   {
     id: 'usr_mod_2',
