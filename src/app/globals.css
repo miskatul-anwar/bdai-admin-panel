@@ -23,6 +23,51 @@
     font-family: var(--font-sans);
     min-height: 100vh;
   }
+
+  /* BDAI Brand Theme Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #e2e8f0;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #0c2461;
+    border-radius: 6px;
+    border: 2px solid #e2e8f0;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #1e3a8a;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #0c2461 #e2e8f0;
+  }
+
+  /* Ensure all inputs, textareas, selects, and options in forms and popups are crisp, white themed, and high contrast */
+  input, textarea, select {
+    color: #0f172a !important;
+    background-color: #f8fafc;
+  }
+  
+  input:focus, textarea:focus, select:focus {
+    background-color: #ffffff;
+    color: #0c2461 !important;
+  }
+
+  select option {
+    background-color: #ffffff;
+    color: #0f172a;
+  }
+
+  ::placeholder {
+    color: #94a3b8;
+  }
 }
 
 @layer components {
