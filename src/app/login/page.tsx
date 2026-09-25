@@ -34,7 +34,6 @@ export default function LoginPage() {
   const roleEmails: Record<UserRole, string> = {
     Admin: 'rudra@cu.ac.bd',
     Moderator: 'miskat.cse@cu.ac.bd',
-    Member: 'sayed.fellow@cu.ac.bd',
   };
 
   // Check for redirect tokens or errors from Google OAuth callback
@@ -275,8 +274,8 @@ export default function LoginPage() {
               <label className="block text-xs font-semibold text-[#0c2461] mb-1">
                 Account Role Presets
               </label>
-              <div className="grid grid-cols-3 gap-2">
-                {(['Admin', 'Moderator', 'Member'] as UserRole[]).map((role) => (
+              <div className="grid grid-cols-2 gap-2">
+                {(['Admin', 'Moderator'] as UserRole[]).map((role) => (
                   <button
                     key={role}
                     type="button"
@@ -349,7 +348,7 @@ export default function LoginPage() {
             <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 text-center">
               Quick 1-Click Testing
             </p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => handleQuickLogin('Admin')}
                 className="py-1.5 px-2 rounded-lg bg-[#0c2461] hover:bg-[#0c2461]/90 text-white text-[10px] font-semibold uppercase tracking-wider transition-colors flex items-center justify-center gap-1 cursor-pointer"
@@ -364,14 +363,6 @@ export default function LoginPage() {
               >
                 <Shield className="w-3 h-3" />
                 <span>Mod</span>
-              </button>
-
-              <button
-                onClick={() => handleQuickLogin('Member')}
-                className="py-1.5 px-2 rounded-lg bg-slate-600 hover:bg-slate-700 text-white text-[10px] font-semibold uppercase tracking-wider transition-colors flex items-center justify-center gap-1 cursor-pointer"
-              >
-                <UserCheck className="w-3 h-3" />
-                <span>Member</span>
               </button>
             </div>
           </div>

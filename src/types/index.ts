@@ -61,7 +61,7 @@ export interface ResearchObjective {
   deliverables: number;
 }
 
-export type UserRole = 'Admin' | 'Moderator' | 'Member';
+export type UserRole = 'Admin' | 'Moderator';
 
 export interface AdminUser {
   id: string;

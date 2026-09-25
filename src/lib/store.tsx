@@ -40,7 +40,6 @@ interface AdminContextType {
   // Permissions
   isAdmin: boolean;
   isModerator: boolean;
-  isMember: boolean;
   canEdit: boolean;
   canDelete: boolean;
   canManageUsers: boolean;
@@ -358,7 +357,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     if (!matchedUser) {
       matchedUser = {
         ...DEMO_ADMIN_USER,
-        role: (roleOrEmail === 'Moderator' || roleOrEmail === 'Member' ? roleOrEmail : 'Admin') as UserRole,
+        role: (roleOrEmail === 'Moderator' ? 'Moderator' : 'Admin') as UserRole,
       };
     }
 
@@ -395,7 +394,6 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
   // Permissions
   const isAdmin = user?.role === 'Admin';
   const isModerator = user?.role === 'Moderator';
-  const isMember = user?.role === 'Member';
   const canEdit = isAdmin || isModerator;
   const canDelete = isAdmin;
   const canManageUsers = isAdmin;
@@ -420,7 +418,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
   // User Management CRUD with Backend Persistence
   const addUser = async (userData: Omit<AdminUser, 'id' | 'createdAt'>) => {
     if (!isAdmin) {
-      showToast('Permission denied: Only Admins can add an Admin, Moderator, or Member', 'error');
+      showToast('Permission denied: Only Admins can add an Admin or Moderator', 'error');
       return;
     }
     const tempId = 'usr_' + Date.now();
@@ -475,7 +473,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteUser = async (id: string) => {
     if (!isAdmin) {
-      showToast('Permission denied: Only Admins can remove an Admin, Moderator, or Member', 'error');
+      showToast('Permission denied: Only Admins can remove an Admin or Moderator', 'error');
       return;
     }
     if (user?.id === id) {
@@ -500,7 +498,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
       showToast('Permission denied: Only Admins can add employees', 'error');
       return;
     } else if (!canEdit) {
-      showToast('Members have read-only access to team management', 'error');
+      showToast('Only Admins and Moderators can add employees', 'error');
       return;
     }
 
@@ -535,7 +533,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
 
   const updateTeamMember = async (id: string, memberData: Partial<TeamMember>) => {
     if (!canEdit) {
-      showToast('Members have read-only access to team management', 'error');
+      showToast('Only Admins and Moderators can edit employees', 'error');
       return;
     }
     setTeam((prev) => prev.map((m) => (m.id === id ? { ...m, ...memberData } : m)));
@@ -585,7 +583,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
   // News CRUD with Backend Persistence
   const addNews = async (newsData: Omit<NewsArticle, 'id'>) => {
     if (!canEdit) {
-      showToast('Members cannot publish articles directly', 'error');
+      showToast('Only Admins and Moderators can publish articles', 'error');
       return;
     }
     const tempId = 'news_' + Date.now();
@@ -615,7 +613,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
 
   const updateNews = async (id: string, newsData: Partial<NewsArticle>) => {
     if (!canEdit) {
-      showToast('Members have read-only access to news', 'error');
+      showToast('Only Admins and Moderators can edit news articles', 'error');
       return;
     }
     setNews((prev) => prev.map((n) => (n.id === id ? { ...n, ...newsData } : n)));
@@ -661,7 +659,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
   // Vacancies CRUD with Backend Persistence
   const addVacancy = async (vacData: Omit<Vacancy, 'id'>) => {
     if (!canEdit) {
-      showToast('Members cannot post vacancy notices', 'error');
+      showToast('Only Admins and Moderators can post vacancy notices', 'error');
       return;
     }
     const tempId = 'vac_' + Date.now();
@@ -691,7 +689,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
 
   const updateVacancy = async (id: string, vacData: Partial<Vacancy>) => {
     if (!canEdit) {
-      showToast('Members cannot edit vacancy notices', 'error');
+      showToast('Only Admins and Moderators can edit vacancy notices', 'error');
       return;
     }
     setVacancies((prev) => prev.map((v) => (v.id === id ? { ...v, ...vacData } : v)));
@@ -737,7 +735,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
   // Objectives update with Backend Persistence
   const updateObjective = async (id: string, objData: Partial<ResearchObjective>) => {
     if (!canEdit) {
-      showToast('Members have read-only access to milestone goals', 'error');
+      showToast('Only Admins and Moderators can update milestone goals', 'error');
       return;
     }
     setObjectives((prev) => prev.map((o) => (o.id === id ? { ...o, ...objData } : o)));
@@ -805,7 +803,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(INITIAL_ACTIVITIES));
     localStorage.setItem(STORAGE_KEYS.ADMIN_PROVISIONING, JSON.stringify(true));
 
-    showToast('Demo data restored with Admin, Moderator, and Member accounts', 'info');
+    showToast('Demo data restored with Admin and Moderator accounts', 'info');
   };
 
   return (
@@ -822,7 +820,6 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
 
         isAdmin,
         isModerator,
-        isMember,
         canEdit,
         canDelete,
         canManageUsers,

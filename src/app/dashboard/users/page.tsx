@@ -26,7 +26,6 @@ const ROLES: { label: string; value: UserRole | 'all' }[] = [
   { label: 'All Users', value: 'all' },
   { label: 'Admins', value: 'Admin' },
   { label: 'Moderators', value: 'Moderator' },
-  { label: 'Members', value: 'Member' },
 ];
 
 export default function UserManagementPage() {
@@ -53,7 +52,7 @@ export default function UserManagementPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    role: 'Member' as UserRole,
+    role: 'Moderator' as UserRole,
     avatar: '/team/miskat.jpg',
     department: 'Department of CSE, University of Chittagong',
     status: 'active' as 'active' | 'inactive',
@@ -64,7 +63,7 @@ export default function UserManagementPage() {
     setFormData({
       name: '',
       email: '',
-      role: 'Member',
+      role: 'Moderator',
       avatar: '/team/miskat.jpg',
       department: 'Department of CSE, University of Chittagong',
       status: 'active',
@@ -111,7 +110,7 @@ export default function UserManagementPage() {
   // Stats
   const adminCount = users.filter((u) => u.role === 'Admin').length;
   const modCount = users.filter((u) => u.role === 'Moderator').length;
-  const memCount = users.filter((u) => u.role === 'Member').length;
+  const activeCount = users.filter((u) => u.status === 'active').length;
 
   // Filtered
   const filteredUsers = users.filter((u) => {
@@ -134,7 +133,7 @@ export default function UserManagementPage() {
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-[#0c2461]">User Management</h1>
             <p className="text-sm text-gray-500">
-              Role assignments and access control for Admins, Moderators, and Members
+              Role assignments and access control for Admins and Moderators
             </p>
           </div>
         </div>
@@ -164,7 +163,7 @@ export default function UserManagementPage() {
               Restricted User Management ({user?.role} Mode)
             </p>
             <p className="text-xs text-amber-700 mt-0.5">
-              By security policy, <strong>Only Admins</strong> can Add, Modify, or Remove an Admin, Moderator, or Member. You can use the &ldquo;Switch&rdquo; button to switch to an Admin account to test user creation and removal.
+              By security policy, <strong>Only Admins</strong> can Add, Modify, or Remove an Admin or Moderator. You can use the &ldquo;Switch&rdquo; button to switch to an Admin account to test user creation and removal.
             </p>
           </div>
         </div>
@@ -186,7 +185,7 @@ export default function UserManagementPage() {
               </span>
             </div>
             <p className="text-xs text-blue-100/80 mt-1 leading-relaxed max-w-2xl">
-              <strong>Strict Option:</strong> Only Admin can Add or Remove an <strong>Admin</strong>, <strong>Moderator</strong>, <strong>Member</strong>, and <strong>all kinds of employees</strong>. Moderators and Members have restricted permissions and cannot alter user accounts or employee rosters.
+              <strong>Strict Option:</strong> Only Admin can Add or Remove an <strong>Admin</strong>, <strong>Moderator</strong>, and <strong>all kinds of employees</strong>. Moderators have restricted permissions and cannot alter user accounts or employee rosters.
             </p>
           </div>
         </div>
@@ -242,18 +241,18 @@ export default function UserManagementPage() {
         </div>
 
         <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex items-start gap-4">
-          <div className="p-3 rounded-xl bg-slate-600 text-white shrink-0">
+          <div className="p-3 rounded-xl bg-emerald-600 text-white shrink-0">
             <UserCheck className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center justify-between">
-              <h3 className="font-bold text-slate-700 text-sm">Members</h3>
-              <span className="text-xs font-mono font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full">
-                {memCount} Users
+              <h3 className="font-bold text-slate-700 text-sm">Active Accounts</h3>
+              <span className="text-xs font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                {activeCount} Users
               </span>
             </div>
             <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-              Contributor access. View private project metrics, research assignments, and draft content with read permissions.
+              Active verified credentials with authorized access to the administrative console and API services.
             </p>
           </div>
         </div>
@@ -308,11 +307,10 @@ export default function UserManagementPage() {
             <tbody className="divide-y divide-gray-100">
               {filteredUsers.map((u) => {
                 const isCurrentUser = user?.id === u.id;
-                const roleBadgeStyles = {
+                const roleBadgeStyle = {
                   Admin: 'bg-[#0c2461] text-white',
                   Moderator: 'bg-blue-600 text-white',
-                  Member: 'bg-slate-600 text-white',
-                }[u.role];
+                }[u.role] || 'bg-slate-600 text-white';
 
                 return (
                   <tr
@@ -350,7 +348,7 @@ export default function UserManagementPage() {
                     {/* Role badge */}
                     <td className="px-6 py-4">
                       <span
-                        className={`inline-block text-[10px] font-black uppercase tracking-widest rounded px-2.5 py-0.5 ${roleBadgeStyles}`}
+                        className={`inline-block text-[10px] font-black uppercase tracking-widest rounded px-2.5 py-0.5 ${roleBadgeStyle}`}
                       >
                         {u.role}
                       </span>
@@ -480,7 +478,6 @@ export default function UserManagementPage() {
               >
                 <option value="Admin">Admin (Full Control - Only Admins can Add/Remove Users &amp; Employees)</option>
                 <option value="Moderator">Moderator (Editorial - Manage news &amp; tenders, cannot add/remove users or employees)</option>
-                <option value="Member">Member (Read-only Contributor)</option>
               </select>
             </div>
 
