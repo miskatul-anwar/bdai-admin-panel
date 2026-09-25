@@ -66,7 +66,10 @@ export default function AdminLayoutWrapper({ children }: { children: React.React
     <div className="min-h-screen bg-[#ecf0f1] font-sans flex flex-col justify-between">
       <AdminNavbar />
 
-      <div className="pt-14 flex-1">
+      <div 
+        className="flex-1 transition-[padding] duration-300 ease-in-out"
+        style={{ paddingTop: 'var(--admin-nav-height, 56px)' }}
+      >
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {children}
         </main>
