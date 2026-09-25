@@ -42,6 +42,8 @@ import {
   dbDeleteUser,
   dbGetActivities,
   dbLogActivity,
+  dbGetSettings,
+  dbUpdateSetting,
 } from './supabase-db';
 
 interface Toast {
@@ -103,6 +105,10 @@ interface AdminContextType {
   activities: ActivityLog[];
   resetToDemoData: () => void;
 
+  // Dynamic Site Settings
+  settings: Record<string, any>;
+  updateSiteSetting: (id: string, data: any) => Promise<void>;
+
   toasts: Toast[];
   showToast: (message: string, type?: 'success' | 'info' | 'error') => void;
   dismissToast: (id: string) => void;
@@ -121,6 +127,7 @@ const STORAGE_KEYS = {
   VACANCIES: 'bdai_admin_vacancies',
   OBJECTIVES: 'bdai_admin_objectives',
   ACTIVITIES: 'bdai_admin_activities',
+  SETTINGS: 'bdai_admin_site_settings',
   ADMIN_PROVISIONING: 'bdai_admin_provisioning_policy',
   CACHE_TIMESTAMP: 'bdai_admin_cache_timestamp',
 };
@@ -197,6 +204,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
   const [vacancies, setVacancies] = useState<Vacancy[]>(INITIAL_VACANCIES);
   const [objectives, setObjectives] = useState<ResearchObjective[]>(INITIAL_OBJECTIVES);
   const [activities, setActivities] = useState<ActivityLog[]>(INITIAL_ACTIVITIES);
+  const [settings, setSettings] = useState<Record<string, any>>({});
   const [adminOnlyProvisioning, setAdminOnlyProvisioning] = useState<boolean>(true);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [isLiveBackend, setIsLiveBackend] = useState<boolean>(false);
@@ -230,6 +238,9 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
 
       const storedActivities = localStorage.getItem(STORAGE_KEYS.ACTIVITIES);
       if (storedActivities) setActivities(JSON.parse(storedActivities));
+
+      const storedSettings = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+      if (storedSettings) setSettings(JSON.parse(storedSettings));
 
       const storedProv = localStorage.getItem(STORAGE_KEYS.ADMIN_PROVISIONING);
       if (storedProv !== null) setAdminOnlyProvisioning(JSON.parse(storedProv));
@@ -288,13 +299,14 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      const [teamRes, newsRes, vacRes, objRes, usersRes, actRes] = await Promise.allSettled([
+      const [teamRes, newsRes, vacRes, objRes, usersRes, actRes, settingsRes] = await Promise.allSettled([
         dbGetTeam(),
         dbGetNews(),
         dbGetVacancies(),
         dbGetObjectives(),
         dbGetUsers(),
         dbGetActivities(),
+        dbGetSettings(),
       ]);
 
       let backendActive = false;
@@ -344,6 +356,12 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
         }));
         setActivities(normalized);
         localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(normalized));
+      }
+
+      if (settingsRes.status === 'fulfilled' && typeof settingsRes.value === 'object' && settingsRes.value !== null) {
+        setSettings(settingsRes.value);
+        localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settingsRes.value));
+        backendActive = true;
       }
 
       if (backendActive && typeof window !== 'undefined') {
@@ -800,6 +818,23 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     recordActivity('Deleted Milestone', 'Objective', id);
   };
 
+  const updateSiteSetting = async (id: string, data: any) => {
+    try {
+      await dbUpdateSetting(id, data, user?.name || 'Admin');
+      setSettings((prev) => {
+        const next = { ...prev, [id]: data };
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(next));
+        }
+        return next;
+      });
+      showToast(`Section "${id}" updated successfully in database`, 'success');
+    } catch (err: any) {
+      showToast(`Failed to update "${id}": ${err.message}`, 'error');
+      throw err;
+    }
+  };
+
   // Reset to Demo Defaults
   const resetToDemoData = () => {
     setUser(INITIAL_USERS[0]);
@@ -871,6 +906,9 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
 
         activities,
         resetToDemoData,
+
+        settings,
+        updateSiteSetting,
 
         toasts,
         showToast,

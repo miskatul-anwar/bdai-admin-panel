@@ -368,6 +368,38 @@ export async function dbLogActivity(action: string, entity: string, target_name:
 }
 
 // ==========================================
+// Site Settings (Dynamic Portal Content)
+// ==========================================
+
+export async function dbGetSettings(): Promise<Record<string, any>> {
+  const { data, error } = await supabase
+    .from('site_settings')
+    .select('id, data, updated_at');
+
+  if (error) {
+    console.error('Failed to fetch site_settings:', error);
+    return {};
+  }
+  const map: Record<string, any> = {};
+  (data || []).forEach((row: any) => {
+    map[row.id] = row.data;
+  });
+  return map;
+}
+
+export async function dbUpdateSetting(id: string, settingData: any, userName: string = 'Admin'): Promise<any> {
+  const { data, error } = await supabase
+    .from('site_settings')
+    .upsert({ id, data: settingData, updated_at: new Date().toISOString() })
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  await dbLogActivity('Updated Site Setting', 'SiteSetting', id, userName);
+  return data?.data;
+}
+
+// ==========================================
 // Direct DB Authentication
 // ==========================================
 
