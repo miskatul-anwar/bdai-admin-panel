@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAdmin } from '@/lib/store';
 import { UserRole } from '@/types';
 import { api } from '@/lib/api';
+import { dbAuthenticate } from '@/lib/supabase-db';
 import {
   Lock,
   Mail,
@@ -75,12 +76,13 @@ export default function LoginPage() {
     setOauthError(null);
 
     try {
-      // Try connecting to Rust backend if online
-      const res = await api.login(email, password);
-      loginWithUser(res.user, res.token);
+      // Authenticate directly against Supabase DB
+      const authenticatedUser = await dbAuthenticate(email, password);
+      loginWithUser(authenticatedUser as any);
       router.push('/dashboard');
-    } catch {
-      // Fallback to local admin store if backend is in local mock mode
+    } catch (err: any) {
+      console.warn('Direct DB auth fallback:', err?.message);
+      // Fallback to local admin store if offline
       setTimeout(() => {
         login(email);
         router.push('/dashboard');

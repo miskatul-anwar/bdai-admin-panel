@@ -19,7 +19,30 @@ import {
   INITIAL_OBJECTIVES,
   INITIAL_ACTIVITIES,
 } from './demo-data';
-import { api } from './api';
+import {
+  dbGetTeam,
+  dbAddTeamMember,
+  dbUpdateTeamMember,
+  dbDeleteTeamMember,
+  dbGetNews,
+  dbAddNews,
+  dbUpdateNews,
+  dbDeleteNews,
+  dbGetVacancies,
+  dbAddVacancy,
+  dbUpdateVacancy,
+  dbDeleteVacancy,
+  dbGetObjectives,
+  dbAddObjective,
+  dbUpdateObjective,
+  dbDeleteObjective,
+  dbGetUsers,
+  dbAddUser,
+  dbUpdateUser,
+  dbDeleteUser,
+  dbGetActivities,
+  dbLogActivity,
+} from './supabase-db';
 
 interface Toast {
   id: string;
@@ -240,6 +263,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     const updated = [newAct, ...activities.slice(0, 19)];
     setActivities(updated);
     localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(updated));
+    dbLogActivity(action, entity, targetName, user?.name || 'Admin').catch(() => {});
   };
 
   // Sync data from live Rust Backend / Supabase PostgreSQL with smart caching
@@ -264,11 +288,13 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      const [teamRes, newsRes, vacRes, objRes] = await Promise.allSettled([
-        api.getTeam(),
-        api.getNews(),
-        api.getVacancies(),
-        api.getObjectives(),
+      const [teamRes, newsRes, vacRes, objRes, usersRes, actRes] = await Promise.allSettled([
+        dbGetTeam(),
+        dbGetNews(),
+        dbGetVacancies(),
+        dbGetObjectives(),
+        dbGetUsers(),
+        dbGetActivities(),
       ]);
 
       let backendActive = false;
@@ -295,38 +321,29 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (objRes.status === 'fulfilled' && Array.isArray(objRes.value)) {
-        setObjectives(objRes.value);
+        setObjectives(objRes.value as any);
         localStorage.setItem(STORAGE_KEYS.OBJECTIVES, JSON.stringify(objRes.value));
         backendActive = true;
       }
 
-      // If authenticated, sync users and activity logs
-      const token = typeof window !== 'undefined' ? localStorage.getItem('bdai_auth_token') : null;
-      if (token) {
-        const [usersRes, actRes] = await Promise.allSettled([
-          api.getUsers(),
-          api.getActivities(),
-        ]);
+      if (usersRes.status === 'fulfilled' && Array.isArray(usersRes.value)) {
+        const normalized = usersRes.value.map(normalizeUser);
+        setUsers(normalized);
+        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(normalized));
+        backendActive = true;
+      }
 
-        if (usersRes.status === 'fulfilled' && Array.isArray(usersRes.value)) {
-          const normalized = usersRes.value.map(normalizeUser);
-          setUsers(normalized);
-          localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(normalized));
-          backendActive = true;
-        }
-
-        if (actRes.status === 'fulfilled' && Array.isArray(actRes.value)) {
-          const normalized = actRes.value.map((a: any) => ({
-            id: a.id,
-            action: a.action,
-            entity: a.entity,
-            targetName: a.target_name,
-            timestamp: new Date(a.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            user: a.user_name,
-          }));
-          setActivities(normalized);
-          localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(normalized));
-        }
+      if (actRes.status === 'fulfilled' && Array.isArray(actRes.value)) {
+        const normalized = actRes.value.map((a: any) => ({
+          id: a.id || 'act_' + Date.now(),
+          action: a.action,
+          entity: a.entity,
+          targetName: a.target_name,
+          timestamp: a.created_at ? new Date(a.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now',
+          user: a.user_name,
+        }));
+        setActivities(normalized);
+        localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(normalized));
       }
 
       if (backendActive && typeof window !== 'undefined') {
@@ -430,7 +447,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setUsers((prev) => [...prev, newUser]);
 
     try {
-      const res = await api.createUser({
+      const res = await dbAddUser({
         name: userData.name,
         email: userData.email,
         password: 'admin123',
@@ -456,7 +473,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...userData } : u)));
 
     try {
-      const res = await api.updateUser(id, userData);
+      const res = await dbUpdateUser(id, userData);
       setUsers((prev) => prev.map((u) => (u.id === id ? normalizeUser(res) : u)));
       showToast('User record updated in database', 'success');
     } catch {
@@ -484,7 +501,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setUsers((prev) => prev.filter((u) => u.id !== id));
 
     try {
-      await api.deleteUser(id);
+      await dbDeleteUser(id);
       showToast('User removed from database', 'info');
     } catch {
       showToast('User removed locally', 'info');
@@ -510,7 +527,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setTeam((prev) => [optimisticMember, ...prev]);
 
     try {
-      const res = await api.createTeamMember({
+      const res = await dbAddTeamMember({
         name: memberData.name,
         designation: memberData.designation,
         role: memberData.role || null,
@@ -539,7 +556,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setTeam((prev) => prev.map((m) => (m.id === id ? { ...m, ...memberData } : m)));
 
     try {
-      const res = await api.updateTeamMember(id, {
+      const res = await dbUpdateTeamMember(id, {
         name: memberData.name,
         designation: memberData.designation,
         role: memberData.role,
@@ -572,7 +589,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setTeam((prev) => prev.filter((m) => m.id !== id));
 
     try {
-      await api.deleteTeamMember(id);
+      await dbDeleteTeamMember(id);
       showToast('Employee removed from database', 'info');
     } catch {
       showToast('Employee removed locally', 'info');
@@ -591,7 +608,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setNews((prev) => [newArticle, ...prev]);
 
     try {
-      const res = await api.createNews({
+      const res = await dbAddNews({
         title: newsData.title,
         slug: newsData.slug,
         excerpt: newsData.excerpt,
@@ -619,7 +636,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setNews((prev) => prev.map((n) => (n.id === id ? { ...n, ...newsData } : n)));
 
     try {
-      const res = await api.updateNews(id, {
+      const res = await dbUpdateNews(id, {
         title: newsData.title,
         slug: newsData.slug,
         excerpt: newsData.excerpt,
@@ -648,7 +665,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setNews((prev) => prev.filter((n) => n.id !== id));
 
     try {
-      await api.deleteNews(id);
+      await dbDeleteNews(id);
       showToast('News article deleted from database', 'info');
     } catch {
       showToast('News article deleted locally', 'info');
@@ -667,7 +684,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setVacancies((prev) => [newVac, ...prev]);
 
     try {
-      const res = await api.createVacancy({
+      const res = await dbAddVacancy({
         title: vacData.title,
         department: vacData.department,
         work_package: vacData.workPackage,
@@ -695,7 +712,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setVacancies((prev) => prev.map((v) => (v.id === id ? { ...v, ...vacData } : v)));
 
     try {
-      const res = await api.updateVacancy(id, {
+      const res = await dbUpdateVacancy(id, {
         title: vacData.title,
         department: vacData.department,
         work_package: vacData.workPackage,
@@ -724,7 +741,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setVacancies((prev) => prev.filter((v) => v.id !== id));
 
     try {
-      await api.deleteVacancy(id);
+      await dbDeleteVacancy(id);
       showToast('Vacancy notice removed from database', 'info');
     } catch {
       showToast('Vacancy notice removed locally', 'info');
@@ -741,8 +758,8 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setObjectives((prev) => prev.map((o) => (o.id === id ? { ...o, ...objData } : o)));
 
     try {
-      const res = await api.updateObjective(id, objData);
-      setObjectives((prev) => prev.map((o) => (o.id === id ? res : o)));
+      const res = await dbUpdateObjective(id, objData);
+      setObjectives((prev) => prev.map((o) => (o.id === id ? (res as ResearchObjective) : o)));
       showToast(`Objective ${id} updated in database`, 'success');
     } catch {
       showToast(`Objective ${id} updated locally`, 'info');
@@ -758,8 +775,8 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setObjectives((prev) => [...prev, objData]);
 
     try {
-      const res = await api.createObjective(objData);
-      setObjectives((prev) => prev.map((o) => (o.id === objData.id ? res : o)));
+      const res = await dbAddObjective(objData);
+      setObjectives((prev) => prev.map((o) => (o.id === objData.id ? (res as ResearchObjective) : o)));
       showToast(`Objective ${objData.id} created in database`, 'success');
     } catch {
       showToast(`Objective ${objData.id} created locally`, 'info');
@@ -775,7 +792,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setObjectives((prev) => prev.filter((o) => o.id !== id));
 
     try {
-      await api.deleteObjective(id);
+      await dbDeleteObjective(id);
       showToast(`Objective ${id} deleted from database`, 'info');
     } catch {
       showToast(`Objective ${id} deleted locally`, 'info');
