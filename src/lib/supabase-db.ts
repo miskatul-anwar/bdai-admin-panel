@@ -615,10 +615,17 @@ export async function dbUpdateEvent(id: string, eventData: Partial<DbEvent>, use
 
 export async function dbDeleteEvent(id: string, userName: string = 'Admin'): Promise<DbEvent[]> {
   const current = await dbGetEvents();
-  const eventToDelete = current.find((e) => e.id === id);
-  const updated = current.filter((e) => e.id !== id);
+  const targetId = String(id).trim();
+  const eventToDelete = current.find(
+    (e) => String(e.id).trim() === targetId || String((e as any).slug || '').trim() === targetId
+  );
+  const updated = current.filter(
+    (e) => String(e.id).trim() !== targetId && String((e as any).slug || '').trim() !== targetId
+  );
   await dbUpdateSetting('events', updated, userName);
-  await dbLogActivity('Deleted Event', 'Event', eventToDelete?.title || id, userName);
+  if (eventToDelete) {
+    await dbLogActivity('Deleted Event', 'Event', eventToDelete.title || id, userName);
+  }
   return updated;
 }
 

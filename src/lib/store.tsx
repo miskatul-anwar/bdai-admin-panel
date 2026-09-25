@@ -1228,7 +1228,12 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
       order: eventData.order ?? events.length + 1,
       gallery: eventData.gallery || [],
     };
-    setEvents((prev) => [...prev, optimisticEvent].sort((a, b) => a.order - b.order));
+    const nextEvents = [...events, optimisticEvent].sort((a, b) => a.order - b.order);
+    setEvents(nextEvents);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(nextEvents));
+      localStorage.removeItem('bdai_last_sync');
+    }
 
     try {
       await dbAddEvent(
@@ -1246,6 +1251,19 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
         },
         user?.name || 'Admin'
       );
+      api.createEvent({
+        id: newId,
+        title: eventData.title,
+        date: eventData.date,
+        status: eventData.status,
+        category: eventData.category,
+        location: eventData.location,
+        description: eventData.description,
+        banner: eventData.banner,
+        gallery: eventData.gallery,
+        order: optimisticEvent.order,
+      }).catch(() => {});
+
       showToast(`Added event "${eventData.title}" (synced to database)`, 'success');
     } catch {
       showToast(`Added event "${eventData.title}" (cached locally)`, 'info');
@@ -1258,11 +1276,14 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
       showToast('Only Admins and Moderators can edit events', 'error');
       return;
     }
-    setEvents((prev) =>
-      prev
-        .map((e) => (e.id === id ? { ...e, ...eventData } : e))
-        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-    );
+    const nextEvents = events
+      .map((e) => (e.id === id ? { ...e, ...eventData } : e))
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    setEvents(nextEvents);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(nextEvents));
+      localStorage.removeItem('bdai_last_sync');
+    }
 
     try {
       await dbUpdateEvent(
@@ -1280,6 +1301,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
         },
         user?.name || 'Admin'
       );
+      api.updateEvent(id, eventData).catch(() => {});
       showToast(`Updated event "${eventData.title || id}" (synced to database)`, 'success');
     } catch {
       showToast(`Updated event "${eventData.title || id}" (cached locally)`, 'info');
@@ -1288,15 +1310,22 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const deleteEvent = async (id: string) => {
-    if (!canDelete) {
-      showToast('Only Admins can delete events', 'error');
+    if (!canEdit) {
+      showToast('Only Admins and Moderators can delete events', 'error');
       return;
     }
-    const target = events.find((e) => e.id === id);
-    setEvents((prev) => prev.filter((e) => e.id !== id));
+    const targetId = String(id).trim();
+    const target = events.find((e) => String(e.id).trim() === targetId || String((e as any).slug || '').trim() === targetId);
+    const nextEvents = events.filter((e) => String(e.id).trim() !== targetId && String((e as any).slug || '').trim() !== targetId);
+    setEvents(nextEvents);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(nextEvents));
+      localStorage.removeItem('bdai_last_sync');
+    }
 
     try {
-      await dbDeleteEvent(id, user?.name || 'Admin');
+      await dbDeleteEvent(targetId, user?.name || 'Admin');
+      api.deleteEvent(targetId).catch(() => {});
       showToast(`Event "${target?.title || id}" deleted from database`, 'info');
     } catch {
       showToast(`Event "${target?.title || id}" deleted locally`, 'info');
