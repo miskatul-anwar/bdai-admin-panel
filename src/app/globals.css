@@ -16,9 +16,6 @@
   --color-canvas: #ecf0f1;
 }
 
-:root {
-  --admin-nav-height: 130px;
-}
 
 @layer base {
   body {

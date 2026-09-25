@@ -135,13 +135,13 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
         </div>
 
         {/* Scrollable Navigation Groups */}
-        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6 no-scrollbar">
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6 no-scrollbar overscroll-contain">
           {NAVIGATION_GROUPS.map((group) => (
             <div key={group.title}>
               <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 px-3 mb-1.5">
                 {group.title}
               </p>
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 {group.items.map((item) => {
                   const active = isItemActive(item.href);
                   const Icon = item.icon;
@@ -151,7 +151,7 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                       key={item.href}
                       href={item.href}
                       onClick={onClose}
-                      className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+                      className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
                         active
                           ? 'bg-white/20 text-white font-semibold shadow-xs ring-1 ring-white/20'
                           : 'text-white/70 hover:text-white hover:bg-white/10'
@@ -203,7 +203,7 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
             <button
               onClick={() => logout()}
               title="Sign Out"
-              className="p-1.5 text-white/60 hover:text-rose-400 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+              className="p-2 text-white/60 hover:text-rose-400 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
             >
               <LogOut className="w-4 h-4" />
             </button>

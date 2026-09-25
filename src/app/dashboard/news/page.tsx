@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   Clock,
   Sparkles,
+  AlertTriangle,
 } from 'lucide-react';
 
 const CATEGORIES: { label: string; value: NewsCategory | 'all' }[] = [
@@ -34,6 +35,7 @@ export default function NewsManagementPage() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState<NewsArticle | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<NewsArticle | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -118,9 +120,13 @@ export default function NewsManagementPage() {
     }
   };
 
-  const handleDelete = (id: string, title: string) => {
-    if (window.confirm(`Are you sure you want to delete "${title}"?`)) {
-      deleteNews(id);
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteNews(deleteTarget.id);
+      setDeleteTarget(null);
+    } catch (err) {
+      console.error('Failed to delete article:', err);
     }
   };
 
@@ -159,7 +165,7 @@ export default function NewsManagementPage() {
         {canEdit && (
           <button
             onClick={handleOpenAdd}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#0c2461] hover:bg-[#0c2461]/90 text-white font-semibold text-xs uppercase tracking-wider shadow-sm transition-colors cursor-pointer self-start sm:self-auto"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#0c2461] hover:bg-[#0c2461]/90 text-white font-semibold text-xs uppercase tracking-wider shadow-sm transition-colors cursor-pointer w-full sm:w-auto"
           >
             <Plus className="w-4 h-4" />
             <span>New Article</span>
@@ -170,14 +176,14 @@ export default function NewsManagementPage() {
       {/* ── Filter and Search Bar ──────────────────────────────── */}
       <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-center">
         {/* Category Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
+        <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 no-scrollbar overscroll-contain">
           {CATEGORIES.map((cat) => (
             <button
               key={cat.value}
               onClick={() => setSelectedCategory(cat.value)}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-colors ${
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-colors whitespace-nowrap cursor-pointer ${
                 selectedCategory === cat.value
-                  ? 'bg-[#0c2461] text-white'
+                  ? 'bg-[#0c2461] text-white shadow-xs'
                   : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
@@ -288,7 +294,7 @@ export default function NewsManagementPage() {
                 )}
                 {canDelete && (
                   <button
-                    onClick={() => handleDelete(article.id, article.title)}
+                    onClick={() => setDeleteTarget(article)}
                     className="p-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors cursor-pointer"
                     title="Delete Article"
                   >
@@ -456,6 +462,36 @@ export default function NewsManagementPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Delete Confirmation Modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mb-4">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900">Delete News Article?</h3>
+            <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+              Are you sure you want to delete <strong className="text-slate-800">"{deleteTarget.title}"</strong>? This will permanently remove it from the public website and Supabase database.
+            </p>
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Article</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

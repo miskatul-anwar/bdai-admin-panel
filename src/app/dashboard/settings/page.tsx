@@ -143,7 +143,7 @@ function SettingsPageContent() {
       </div>
 
       {/* ── Tab Navigation ─────────────────────────────────────── */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none border-b border-slate-200">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-2 border-b border-slate-200 no-scrollbar overscroll-contain">
         {[
           { id: 'stats', label: 'Key Metrics & Numbers', icon: BarChart3 },
           { id: 'hero', label: 'Hero Banner', icon: Sparkles },

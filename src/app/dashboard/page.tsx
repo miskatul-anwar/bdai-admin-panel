@@ -79,18 +79,18 @@ export default function DashboardOverviewPage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {canEdit ? (
                 <>
                   <Link
                     href="/dashboard/team"
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-blue-500 text-white text-[11px] font-semibold tracking-wider uppercase transition-opacity hover:opacity-90"
+                    className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-full bg-blue-500 text-white text-[11px] font-semibold tracking-wider uppercase transition-opacity hover:opacity-90"
                   >
                     <Plus size={13} /> Add Member
                   </Link>
                   <Link
                     href="/dashboard/news"
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-slate-300 border border-slate-700 text-[11px] font-medium tracking-wider uppercase transition-colors hover:border-slate-500 hover:text-white"
+                    className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-full text-slate-300 border border-slate-700 text-[11px] font-medium tracking-wider uppercase transition-colors hover:border-slate-500 hover:text-white"
                   >
                     <Plus size={13} /> Post News
                   </Link>
@@ -108,7 +108,7 @@ export default function DashboardOverviewPage() {
 
           {/* Compact Stats Row matching bdai-web */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-0 mt-8 border border-slate-800 rounded-lg overflow-hidden text-sm">
-            <div className="py-3 px-3 text-center bg-slate-900/50 border-r border-slate-800">
+            <div className="py-3 px-3 text-center bg-slate-900/50 border-r border-b sm:border-b-0 border-slate-800">
               <div className="text-2xl sm:text-3xl font-bold text-blue-400 tracking-tight leading-none">
                 {totalTeam}
               </div>
@@ -117,7 +117,7 @@ export default function DashboardOverviewPage() {
               </div>
             </div>
 
-            <div className="py-3 px-3 text-center bg-slate-900/50 border-r border-slate-800">
+            <div className="py-3 px-3 text-center bg-slate-900/50 sm:border-r border-b sm:border-b-0 border-slate-800">
               <div className="text-2xl sm:text-3xl font-bold text-blue-400 tracking-tight leading-none">
                 {publishedNews}
               </div>
@@ -148,7 +148,7 @@ export default function DashboardOverviewPage() {
       </section>
 
       {/* ── Sector Ticker Ribbon (Matching bdai-web) ───────────────── */}
-      <div className="bg-blue-500 rounded-xl px-4 py-2.5 flex items-center justify-between overflow-x-auto gap-4 shadow-sm text-white">
+      <div className="bg-blue-500 rounded-xl px-4 py-2.5 flex items-center justify-between overflow-x-auto gap-4 shadow-sm text-white no-scrollbar overscroll-contain">
         <span className="text-[11px] font-black uppercase tracking-widest shrink-0 text-white/80">
           Target Sectors:
         </span>
