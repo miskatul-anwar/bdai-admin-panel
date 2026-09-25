@@ -65,6 +65,7 @@ import {
 } from './supabase-db';
 import { setCookie, deleteCookie } from './cookies';
 import { api } from './api';
+import { getEventTimestamp } from './date-utils';
 
 interface Toast {
   id: string;
@@ -179,6 +180,7 @@ function normalizeEvent(e: any): EventItem {
     id: e.id,
     title: e.title,
     date: e.date,
+    date_iso: e.date_iso || e.dateIso,
     status: e.status || 'held',
     category: e.category || 'Event',
     location: e.location || '',
@@ -403,7 +405,16 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
       if (storedVideos) setVideos(JSON.parse(storedVideos));
 
       const storedEvents = localStorage.getItem(STORAGE_KEYS.EVENTS);
-      if (storedEvents) setEvents(JSON.parse(storedEvents));
+      if (storedEvents) {
+        try {
+          const parsed = JSON.parse(storedEvents);
+          if (Array.isArray(parsed)) {
+            setEvents(parsed.sort((a: any, b: any) => getEventTimestamp(b) - getEventTimestamp(a)));
+          }
+        } catch {
+          // ignore error
+        }
+      }
 
       const storedActivities = localStorage.getItem(STORAGE_KEYS.ACTIVITIES);
       if (storedActivities) setActivities(JSON.parse(storedActivities));
@@ -525,7 +536,9 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (eventsRes.status === 'fulfilled' && Array.isArray(eventsRes.value) && eventsRes.value.length > 0) {
-        const normalized = eventsRes.value.map(normalizeEvent);
+        const normalized = eventsRes.value
+          .map(normalizeEvent)
+          .sort((a, b) => getEventTimestamp(b) - getEventTimestamp(a));
         setEvents(normalized);
         localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(normalized));
         backendActive = true;
@@ -1225,10 +1238,12 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     const optimisticEvent: EventItem = {
       ...eventData,
       id: newId,
-      order: eventData.order ?? events.length + 1,
+      order: 1,
       gallery: eventData.gallery || [],
     };
-    const nextEvents = [...events, optimisticEvent].sort((a, b) => a.order - b.order);
+    const nextEvents = [optimisticEvent, ...events.filter((e) => e.id !== newId)]
+      .sort((a, b) => getEventTimestamp(b) - getEventTimestamp(a))
+      .map((e, idx) => ({ ...e, order: idx + 1 }));
     setEvents(nextEvents);
     if (typeof window !== 'undefined') {
       localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(nextEvents));
@@ -1241,13 +1256,14 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
           id: newId,
           title: eventData.title,
           date: eventData.date,
+          date_iso: eventData.date_iso,
           status: eventData.status,
           category: eventData.category,
           location: eventData.location,
           description: eventData.description,
           banner: eventData.banner,
           gallery: eventData.gallery,
-          order: optimisticEvent.order,
+          order: 1,
         },
         user?.name || 'Admin'
       );
@@ -1265,7 +1281,8 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     }
     const nextEvents = events
       .map((e) => (e.id === id ? { ...e, ...eventData } : e))
-      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      .sort((a, b) => getEventTimestamp(b) - getEventTimestamp(a))
+      .map((e, idx) => ({ ...e, order: idx + 1 }));
     setEvents(nextEvents);
     if (typeof window !== 'undefined') {
       localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(nextEvents));
@@ -1278,13 +1295,13 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
         {
           title: eventData.title,
           date: eventData.date,
+          date_iso: eventData.date_iso,
           status: eventData.status,
           category: eventData.category,
           location: eventData.location,
           description: eventData.description,
           banner: eventData.banner,
           gallery: eventData.gallery,
-          order: eventData.order,
         },
         user?.name || 'Admin'
       );
@@ -1302,7 +1319,10 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     }
     const targetId = String(id).trim();
     const target = events.find((e) => String(e.id).trim() === targetId || String((e as any).slug || '').trim() === targetId);
-    const nextEvents = events.filter((e) => String(e.id).trim() !== targetId && String((e as any).slug || '').trim() !== targetId);
+    const nextEvents = events
+      .filter((e) => String(e.id).trim() !== targetId && String((e as any).slug || '').trim() !== targetId)
+      .sort((a, b) => getEventTimestamp(b) - getEventTimestamp(a))
+      .map((e, idx) => ({ ...e, order: idx + 1 }));
     setEvents(nextEvents);
     if (typeof window !== 'undefined') {
       localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(nextEvents));

@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import bcrypt from 'bcryptjs';
+import { getEventTimestamp } from './date-utils';
 
 export interface DbTeamMember {
   id?: string;
@@ -573,6 +574,7 @@ export interface DbEvent {
   id: string;
   title: string;
   date: string;
+  date_iso?: string;
   status: 'held' | 'upcoming';
   category?: string;
   location?: string;
@@ -593,13 +595,17 @@ export async function dbGetEvents(): Promise<DbEvent[]> {
 
   if (error || !data) return [];
   const list = Array.isArray(data.data) ? data.data : [];
-  list.sort((a: DbEvent, b: DbEvent) => (a.order ?? 0) - (b.order ?? 0));
+  list.sort((a: DbEvent, b: DbEvent) => getEventTimestamp(b) - getEventTimestamp(a));
   return list;
 }
 
 export async function dbAddEvent(event: DbEvent, userName: string = 'Admin'): Promise<DbEvent[]> {
   const current = await dbGetEvents();
-  const updated = [...current, event];
+  const updated = [event, ...current.filter((e) => e.id !== event.id)];
+  updated.sort((a, b) => getEventTimestamp(b) - getEventTimestamp(a));
+  updated.forEach((e, idx) => {
+    e.order = idx + 1;
+  });
   await dbUpdateSetting('events', updated, userName);
   await dbLogActivity('Added Event', 'Event', event.title, userName);
   return updated;
@@ -608,6 +614,10 @@ export async function dbAddEvent(event: DbEvent, userName: string = 'Admin'): Pr
 export async function dbUpdateEvent(id: string, eventData: Partial<DbEvent>, userName: string = 'Admin'): Promise<DbEvent[]> {
   const current = await dbGetEvents();
   const updated = current.map((e) => (e.id === id ? { ...e, ...eventData, updated_at: new Date().toISOString() } : e));
+  updated.sort((a, b) => getEventTimestamp(b) - getEventTimestamp(a));
+  updated.forEach((e, idx) => {
+    e.order = idx + 1;
+  });
   await dbUpdateSetting('events', updated, userName);
   await dbLogActivity('Updated Event', 'Event', eventData.title || id, userName);
   return updated;
@@ -622,6 +632,10 @@ export async function dbDeleteEvent(id: string, userName: string = 'Admin'): Pro
   const updated = current.filter(
     (e) => String(e.id).trim() !== targetId && String((e as any).slug || '').trim() !== targetId
   );
+  updated.sort((a, b) => getEventTimestamp(b) - getEventTimestamp(a));
+  updated.forEach((e, idx) => {
+    e.order = idx + 1;
+  });
   await dbUpdateSetting('events', updated, userName);
   if (eventToDelete) {
     await dbLogActivity('Deleted Event', 'Event', eventToDelete.title || id, userName);

@@ -23,6 +23,7 @@ import { useAdmin } from '@/lib/store';
 import { EventItem, EventGalleryItem } from '@/types';
 import ImageUpload from '@/components/ui/ImageUpload';
 import { uploadImage } from '@/lib/api';
+import { getEventTimestamp, extractDateAndTime, formatEventDisplayDate } from '@/lib/date-utils';
 
 const CATEGORY_SUGGESTIONS = [
   'Workshop',
@@ -69,11 +70,19 @@ export default function EventsManagementPage() {
   const [isDragging, setIsDragging] = useState(false);
   const galleryFileInputRef = useRef<HTMLInputElement>(null);
 
+  // Date & Time picker state inside modal
+  const [pickerDate, setPickerDate] = useState('');
+  const [pickerTime, setPickerTime] = useState('');
+  const [showCustomDateDisplay, setShowCustomDateDisplay] = useState(false);
+
   // Delete Confirmation Modal State
   const [deleteTarget, setDeleteTarget] = useState<EventItem | null>(null);
 
+  // Sort events chronologically descending: latest at the top, followed by past ones
+  const sortedEvents = [...events].sort((a, b) => getEventTimestamp(b) - getEventTimestamp(a));
+
   // Filtered Events
-  const filteredEvents = events.filter((e) => {
+  const filteredEvents = sortedEvents.filter((e) => {
     const matchesStatus =
       statusFilter === 'all' || (e.status || '').toLowerCase() === statusFilter;
     const matchesSearch =
@@ -92,19 +101,39 @@ export default function EventsManagementPage() {
   const upcomingCount = events.filter((e) => (e.status || '').toLowerCase() === 'upcoming').length;
   const totalSnapshots = events.reduce((acc, curr) => acc + (curr.gallery?.length || 0), 0);
 
+  // Handler for Date & Time picker changes
+  const handleDateChange = (newDate: string, newTime: string) => {
+    setPickerDate(newDate);
+    setPickerTime(newTime);
+    const formatted = formatEventDisplayDate(newDate, newTime);
+    const dateIso = newTime ? `${newDate}T${newTime}` : newDate;
+    setFormData((prev) => ({
+      ...prev,
+      date: formatted,
+      date_iso: dateIso,
+    }));
+  };
+
   // Open Add Modal
   const handleOpenAdd = () => {
     setEditingEvent(null);
+    const today = new Date().toISOString().split('T')[0];
+    const initialTime = '';
+    const formatted = formatEventDisplayDate(today, initialTime);
+    setPickerDate(today);
+    setPickerTime(initialTime);
+    setShowCustomDateDisplay(false);
     setFormData({
       title: '',
-      date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
+      date: formatted,
+      date_iso: today,
       status: 'held',
       category: 'Workshop',
       location: 'Department of CSE, University of Chittagong',
       description: '',
       banner: '/events/workshop_banner.jpeg',
       gallery: [],
-      order: events.length + 1,
+      order: 1,
     });
     setNewGallerySrc('');
     setNewGalleryAlt('');
@@ -116,9 +145,14 @@ export default function EventsManagementPage() {
   // Open Edit Modal
   const handleOpenEdit = (event: EventItem) => {
     setEditingEvent(event);
+    const extracted = extractDateAndTime(event.date, event.date_iso);
+    setPickerDate(extracted.date);
+    setPickerTime(extracted.time);
+    setShowCustomDateDisplay(false);
     setFormData({
       title: event.title,
       date: event.date,
+      date_iso: event.date_iso || (extracted.date ? (extracted.time ? `${extracted.date}T${extracted.time}` : extracted.date) : undefined),
       status: event.status,
       category: event.category || 'Workshop',
       location: event.location || '',
@@ -510,33 +544,88 @@ export default function EventsManagementPage() {
                 />
               </div>
 
-              {/* Date & Status */}
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                    Date & Time Display *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    placeholder="e.g. 29th July 2026 or 2.00PM · 19th May 2026"
-                    className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0c2461]/20 focus:border-[#0c2461]"
-                  />
+              {/* Event Date, Time & Status Picker */}
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-[#0c2461]" />
+                    Date & Time Picker *
+                  </span>
+                  {formData.date && (
+                    <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-emerald-600" />
+                      {formData.date}
+                    </span>
+                  )}
                 </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                    Event Status *
-                  </label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as 'held' | 'upcoming' })}
-                    className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0c2461]/20 focus:border-[#0c2461]"
-                  >
-                    <option value="held">Held (Archive with photos)</option>
-                    <option value="upcoming">Upcoming (Future schedule)</option>
-                  </select>
+
+                <div className="grid sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                      Event Date *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={pickerDate}
+                      onChange={(e) => handleDateChange(e.target.value, pickerTime)}
+                      className="w-full px-3 py-2 text-sm bg-white rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0c2461]/20 focus:border-[#0c2461] transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                      Time (Optional)
+                    </label>
+                    <input
+                      type="time"
+                      value={pickerTime}
+                      onChange={(e) => handleDateChange(pickerDate, e.target.value)}
+                      className="w-full px-3 py-2 text-sm bg-white rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0c2461]/20 focus:border-[#0c2461] transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                      Event Status *
+                    </label>
+                    <select
+                      value={formData.status}
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value as 'held' | 'upcoming' })}
+                      className="w-full px-3 py-2 text-sm bg-white rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0c2461]/20 focus:border-[#0c2461] transition-colors"
+                    >
+                      <option value="held">Held (Archive with photos)</option>
+                      <option value="upcoming">Upcoming (Future schedule)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Display Text & Customization Toggle */}
+                <div className="pt-1.5 border-t border-slate-200/60 flex flex-col gap-1">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-slate-500 font-medium">Display on website & cards:</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomDateDisplay(!showCustomDateDisplay)}
+                      className="text-[#0c2461] hover:underline font-semibold cursor-pointer"
+                    >
+                      {showCustomDateDisplay ? 'Use standard auto-format' : 'Customize display text'}
+                    </button>
+                  </div>
+                  {showCustomDateDisplay ? (
+                    <input
+                      type="text"
+                      required
+                      value={formData.date}
+                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                      placeholder="e.g. 29th July 2026 or 2.00PM · 19th May 2026"
+                      className="w-full px-3 py-1.5 text-xs bg-white rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0c2461]/20"
+                    />
+                  ) : (
+                    <p className="text-xs text-slate-700 font-medium bg-white px-3 py-1.5 rounded-lg border border-slate-200/70">
+                      {formData.date || 'Please select a date above'}
+                    </p>
+                  )}
                 </div>
               </div>
 

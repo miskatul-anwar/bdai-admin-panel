@@ -473,6 +473,7 @@ export const INITIAL_EVENTS: EventItem[] = [
   {
     id: 'event_workshop_debasish',
     date: '29th July 2026',
+    date_iso: '2026-07-29',
     title: 'Professor Dr. Debasish Ghose from Kristiania University College, Norway visited our lab for collaboration purpose. He delivers an intensive quality paper writing workshop.',
     status: 'held',
     category: 'Workshop',
@@ -494,6 +495,7 @@ export const INITIAL_EVENTS: EventItem[] = [
   {
     id: 'event_seminar_rag_bi',
     date: '2.00PM · 19th May 2026',
+    date_iso: '2026-05-19T14:00',
     title: 'RAG-Driven Business Intelligence Platform Integration: Enterprise Data for Real-Time Insight, Predictive, and Prescriptive Decision Analytics',
     status: 'held',
     category: 'Seminar',
@@ -513,6 +515,7 @@ export const INITIAL_EVENTS: EventItem[] = [
   {
     id: 'event_phd_cyberbullying',
     date: '2.00PM · 14th May 2026',
+    date_iso: '2026-05-14T14:00',
     title: 'Identificatin of the Digital Footprints of Cyberbullying and the personality traits of the perpretators to protect the malicious activity',
     status: 'held',
     category: 'PhD Seminar',

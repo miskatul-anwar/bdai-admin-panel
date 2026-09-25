@@ -127,6 +127,7 @@ export interface EventItem {
   id: string;
   title: string;
   date: string;
+  date_iso?: string;
   status: EventStatus;
   category: string;
   location?: string;
