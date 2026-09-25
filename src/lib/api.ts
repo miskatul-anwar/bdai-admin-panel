@@ -45,14 +45,35 @@ export const api = {
   // Health
   checkHealth: () => apiRequest<{ status: string; database: string }>('/health'),
 
-  // Auth
-  login: (email: string, password: string) =>
-    apiRequest<{ token: string; user: any }>('/auth/login', {
+  // Auth (JWT Access Tokens)
+  login: (usernameOrEmail: string, password: string) =>
+    apiRequest<{
+      token: string;
+      access_token: string;
+      token_type: string;
+      expires_in: number;
+      user: any;
+    }>('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ username: usernameOrEmail, email: usernameOrEmail, password }),
+    }),
+  refreshToken: () =>
+    apiRequest<{
+      token: string;
+      access_token: string;
+      token_type: string;
+      expires_in: number;
+      user: any;
+    }>('/auth/refresh', {
+      method: 'POST',
+    }),
+  verifyToken: (token?: string) =>
+    apiRequest<{ valid: boolean; claims?: any; message?: string }>('/auth/verify', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
     }),
   googleAuth: (payload: { credential?: string; code?: string; redirect_uri?: string }) =>
-    apiRequest<{ token: string; user: any }>('/auth/google', {
+    apiRequest<{ token: string; access_token?: string; user: any }>('/auth/google', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),

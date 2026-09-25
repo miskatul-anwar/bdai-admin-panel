@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAdmin } from '@/lib/store';
 import { dbAuthenticate } from '@/lib/supabase-db';
+import { api } from '@/lib/api';
 import {
   Lock,
   User,
@@ -31,9 +32,19 @@ export default function LoginPage() {
     setErrorMsg(null);
 
     try {
-      // Authenticate directly against Supabase DB using username + password
+      // 1. Authenticate directly against Supabase DB using username + password
       const authenticatedUser = await dbAuthenticate(username, password);
-      loginWithUser(authenticatedUser as any);
+
+      // 2. Fetch Axum JWT Access Token for backend API services & file uploads
+      let jwtAccessToken: string | undefined;
+      try {
+        const authData = await api.login(username, password);
+        jwtAccessToken = authData.access_token || authData.token;
+      } catch (backendErr) {
+        console.warn('Axum JWT Access Token acquisition skipped:', backendErr);
+      }
+
+      loginWithUser(authenticatedUser as any, jwtAccessToken);
       showToast(`Welcome back, ${authenticatedUser.name}! (${authenticatedUser.role})`, 'success');
       router.push('/dashboard');
     } catch (err: any) {
