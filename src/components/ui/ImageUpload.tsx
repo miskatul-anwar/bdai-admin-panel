@@ -4,6 +4,7 @@ import React, { useState, useRef } from 'react';
 import { UploadCloud, Image as ImageIcon, CheckCircle2, AlertCircle, Loader2, X, Link as LinkIcon } from 'lucide-react';
 
 import { API_BASE_URL } from '@/lib/api';
+import { getCookie } from '@/lib/cookies';
 
 interface ImageUploadProps {
   value: string;
@@ -49,7 +50,9 @@ export default function ImageUpload({
       formData.append('file', file);
       formData.append('folder', folder);
 
-      const token = typeof window !== 'undefined' ? localStorage.getItem('bdai_auth_token') : null;
+      const token = (typeof window !== 'undefined' ? localStorage.getItem('bdai_auth_token') : null)
+        || getCookie('bdai_access_token')
+        || getCookie('access_token');
       const headers: Record<string, string> = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
@@ -57,6 +60,7 @@ export default function ImageUpload({
       const res = await fetch(`${API_BASE_URL}/upload`, {
         method: 'POST',
         headers,
+        credentials: 'include',
         body: formData,
       });
 
@@ -65,14 +69,13 @@ export default function ImageUpload({
         const uploadedUrl = data.secure_url || data.url;
         onChange(uploadedUrl);
       } else {
-        // Fallback for previewing local file if backend is offline or before Cloudinary keys are supplied
-        const previewUrl = URL.createObjectURL(file);
-        onChange(previewUrl);
+        const errData = await res.json().catch(() => ({}));
+        const msg = errData.error || errData.message || `Upload failed (Status ${res.status})`;
+        setError(msg);
       }
-    } catch {
-      // Local preview fallback
-      const previewUrl = URL.createObjectURL(file);
-      onChange(previewUrl);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Upload failed due to network error';
+      setError(msg);
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
