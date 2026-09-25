@@ -10,6 +10,7 @@ import {
   UserRole,
   ActivityLog,
   Tool,
+  AdminVideo,
 } from '@/types';
 import {
   DEMO_ADMIN_USER,
@@ -20,6 +21,7 @@ import {
   INITIAL_OBJECTIVES,
   INITIAL_ACTIVITIES,
   INITIAL_TOOLS,
+  INITIAL_VIDEOS,
 } from './demo-data';
 import {
   dbGetTeam,
@@ -50,6 +52,10 @@ import {
   dbAddTool,
   dbUpdateTool,
   dbDeleteTool,
+  dbGetVideos,
+  dbAddVideo,
+  dbUpdateVideo,
+  dbDeleteVideo,
 } from './supabase-db';
 import { setCookie, deleteCookie } from './cookies';
 import { api } from './api';
@@ -117,6 +123,12 @@ interface AdminContextType {
   updateTool: (id: string, item: Partial<Tool>) => Promise<void>;
   deleteTool: (id: string) => Promise<void>;
 
+  // BDAI Videos CRUD
+  videos: AdminVideo[];
+  addVideo: (item: Omit<AdminVideo, 'id'>) => Promise<void>;
+  updateVideo: (id: string, item: Partial<AdminVideo>) => Promise<void>;
+  deleteVideo: (id: string) => Promise<void>;
+
   activities: ActivityLog[];
   resetToDemoData: () => void;
 
@@ -142,11 +154,27 @@ const STORAGE_KEYS = {
   VACANCIES: 'bdai_admin_vacancies',
   OBJECTIVES: 'bdai_admin_objectives',
   TOOLS: 'bdai_admin_tools',
+  VIDEOS: 'bdai_admin_videos',
   ACTIVITIES: 'bdai_admin_activities',
   SETTINGS: 'bdai_admin_site_settings',
   ADMIN_PROVISIONING: 'bdai_admin_provisioning_policy',
   CACHE_TIMESTAMP: 'bdai_admin_cache_timestamp',
 };
+
+function normalizeVideo(v: any): AdminVideo {
+  return {
+    id: v.id,
+    title: v.title,
+    url: v.url,
+    thumbnail: v.thumbnail || '',
+    description: v.description || '',
+    postedAt: v.postedAt || v.posted_at || '',
+    order: v.order ?? 0,
+    createdAt: v.createdAt || v.created_at,
+    updatedAt: v.updatedAt || v.updated_at,
+  };
+}
+
 
 function normalizeTool(t: any): Tool {
   return {
@@ -283,6 +311,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
   const [vacancies, setVacancies] = useState<Vacancy[]>(INITIAL_VACANCIES);
   const [objectives, setObjectives] = useState<ResearchObjective[]>(INITIAL_OBJECTIVES);
   const [tools, setTools] = useState<Tool[]>(INITIAL_TOOLS);
+  const [videos, setVideos] = useState<AdminVideo[]>(INITIAL_VIDEOS);
   const [activities, setActivities] = useState<ActivityLog[]>(INITIAL_ACTIVITIES);
   const [settings, setSettings] = useState<Record<string, any>>({});
   const [adminOnlyProvisioning, setAdminOnlyProvisioning] = useState<boolean>(true);
@@ -338,6 +367,9 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
 
       const storedTools = localStorage.getItem(STORAGE_KEYS.TOOLS);
       if (storedTools) setTools(JSON.parse(storedTools));
+
+      const storedVideos = localStorage.getItem(STORAGE_KEYS.VIDEOS);
+      if (storedVideos) setVideos(JSON.parse(storedVideos));
 
       const storedActivities = localStorage.getItem(STORAGE_KEYS.ACTIVITIES);
       if (storedActivities) setActivities(JSON.parse(storedActivities));
@@ -402,7 +434,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      const [teamRes, newsRes, vacRes, objRes, usersRes, actRes, settingsRes, toolsRes] = await Promise.allSettled([
+      const [teamRes, newsRes, vacRes, objRes, usersRes, actRes, settingsRes, toolsRes, videosRes] = await Promise.allSettled([
         dbGetTeam(),
         dbGetNews(),
         dbGetVacancies(),
@@ -411,6 +443,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
         dbGetActivities(),
         dbGetSettings(),
         dbGetTools(),
+        dbGetVideos(),
       ]);
 
       let backendActive = false;
@@ -446,6 +479,13 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
         const normalized = toolsRes.value.map(normalizeTool);
         setTools(normalized);
         localStorage.setItem(STORAGE_KEYS.TOOLS, JSON.stringify(normalized));
+        backendActive = true;
+      }
+
+      if (videosRes.status === 'fulfilled' && Array.isArray(videosRes.value) && videosRes.value.length > 0) {
+        const normalized = videosRes.value.map(normalizeVideo);
+        setVideos(normalized);
+        localStorage.setItem(STORAGE_KEYS.VIDEOS, JSON.stringify(normalized));
         backendActive = true;
       }
 
@@ -1043,6 +1083,96 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     recordActivity('Deleted Tool', 'Tool', target?.title || id);
   };
 
+  // Videos CRUD
+  const addVideo = async (videoData: Omit<AdminVideo, 'id'>) => {
+    if (!canEdit) {
+      showToast('Only Admins and Moderators can add videos', 'error');
+      return;
+    }
+    const id =
+      videoData.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '') || ('video_' + Date.now());
+
+    const optimisticVideo: AdminVideo = {
+      ...videoData,
+      id,
+      order: videoData.order ?? videos.length + 1,
+      postedAt: videoData.postedAt || 'Recently added',
+    };
+
+    setVideos((prev) => [...prev, optimisticVideo].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
+
+    try {
+      await dbAddVideo(
+        {
+          id,
+          title: videoData.title,
+          url: videoData.url,
+          thumbnail: videoData.thumbnail,
+          description: videoData.description,
+          posted_at: videoData.postedAt,
+          order: videoData.order,
+        },
+        user?.name || 'Admin'
+      );
+      showToast(`Added video "${videoData.title}" (synced to database)`, 'success');
+    } catch {
+      showToast(`Added video "${videoData.title}" (cached locally)`, 'info');
+    }
+    recordActivity('Added Video', 'Video', videoData.title);
+  };
+
+  const updateVideo = async (id: string, videoData: Partial<AdminVideo>) => {
+    if (!canEdit) {
+      showToast('Only Admins and Moderators can edit videos', 'error');
+      return;
+    }
+    setVideos((prev) =>
+      prev
+        .map((v) => (v.id === id ? { ...v, ...videoData } : v))
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    );
+
+    try {
+      await dbUpdateVideo(
+        id,
+        {
+          title: videoData.title,
+          url: videoData.url,
+          thumbnail: videoData.thumbnail,
+          description: videoData.description,
+          posted_at: videoData.postedAt,
+          order: videoData.order,
+        },
+        user?.name || 'Admin'
+      );
+      showToast(`Updated video "${videoData.title || id}" (synced to database)`, 'success');
+    } catch {
+      showToast(`Updated video "${videoData.title || id}" (cached locally)`, 'info');
+    }
+    recordActivity('Updated Video', 'Video', videoData.title || id);
+  };
+
+  const deleteVideo = async (id: string) => {
+    if (!canDelete) {
+      showToast('Only Admins can delete videos', 'error');
+      return;
+    }
+    const target = videos.find((v) => v.id === id);
+    setVideos((prev) => prev.filter((v) => v.id !== id));
+
+    try {
+      await dbDeleteVideo(id, user?.name || 'Admin');
+      showToast(`Video "${target?.title || id}" deleted from database`, 'info');
+    } catch {
+      showToast(`Video "${target?.title || id}" deleted locally`, 'info');
+    }
+    recordActivity('Deleted Video', 'Video', target?.title || id);
+  };
+
   const updateSiteSetting = async (id: string, data: any) => {
     try {
       await dbUpdateSetting(id, data, user?.name || 'Admin');
@@ -1069,6 +1199,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setVacancies(INITIAL_VACANCIES);
     setObjectives(INITIAL_OBJECTIVES);
     setTools(INITIAL_TOOLS);
+    setVideos(INITIAL_VIDEOS);
     setActivities(INITIAL_ACTIVITIES);
     setAdminOnlyProvisioning(true);
 
@@ -1079,6 +1210,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem(STORAGE_KEYS.VACANCIES, JSON.stringify(INITIAL_VACANCIES));
     localStorage.setItem(STORAGE_KEYS.OBJECTIVES, JSON.stringify(INITIAL_OBJECTIVES));
     localStorage.setItem(STORAGE_KEYS.TOOLS, JSON.stringify(INITIAL_TOOLS));
+    localStorage.setItem(STORAGE_KEYS.VIDEOS, JSON.stringify(INITIAL_VIDEOS));
     localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(INITIAL_ACTIVITIES));
     localStorage.setItem(STORAGE_KEYS.ADMIN_PROVISIONING, JSON.stringify(true));
 
@@ -1136,6 +1268,11 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
         addTool,
         updateTool,
         deleteTool,
+
+        videos,
+        addVideo,
+        updateVideo,
+        deleteVideo,
 
         activities,
         resetToDemoData,

@@ -505,3 +505,58 @@ export async function dbDeleteTool(id: string, userName: string = 'Admin'): Prom
   await dbLogActivity('Deleted Tool', 'Tool', toolToDelete?.title || id, userName);
   return updated;
 }
+
+// ==========================================
+// BDAI Videos Showcase (Direct DB)
+// ==========================================
+
+export interface DbVideo {
+  id: string;
+  title: string;
+  url: string;
+  thumbnail?: string;
+  description?: string;
+  posted_at?: string;
+  order?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export async function dbGetVideos(): Promise<DbVideo[]> {
+  const { data, error } = await supabase
+    .from('site_settings')
+    .select('data')
+    .eq('id', 'videos')
+    .maybeSingle();
+
+  if (error || !data) return [];
+  const list = Array.isArray(data.data) ? data.data : [];
+  list.sort((a: DbVideo, b: DbVideo) => (a.order ?? 0) - (b.order ?? 0));
+  return list;
+}
+
+export async function dbAddVideo(video: DbVideo, userName: string = 'Admin'): Promise<DbVideo[]> {
+  const current = await dbGetVideos();
+  const updated = [...current, video];
+  await dbUpdateSetting('videos', updated, userName);
+  await dbLogActivity('Added Video', 'Video', video.title, userName);
+  return updated;
+}
+
+export async function dbUpdateVideo(id: string, videoData: Partial<DbVideo>, userName: string = 'Admin'): Promise<DbVideo[]> {
+  const current = await dbGetVideos();
+  const updated = current.map((v) => (v.id === id ? { ...v, ...videoData, updated_at: new Date().toISOString() } : v));
+  await dbUpdateSetting('videos', updated, userName);
+  await dbLogActivity('Updated Video', 'Video', videoData.title || id, userName);
+  return updated;
+}
+
+export async function dbDeleteVideo(id: string, userName: string = 'Admin'): Promise<DbVideo[]> {
+  const current = await dbGetVideos();
+  const videoToDelete = current.find((v) => v.id === id);
+  const updated = current.filter((v) => v.id !== id);
+  await dbUpdateSetting('videos', updated, userName);
+  await dbLogActivity('Deleted Video', 'Video', videoToDelete?.title || id, userName);
+  return updated;
+}
+

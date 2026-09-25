@@ -1,4 +1,4 @@
-import { TeamMember, NewsArticle, Vacancy, ResearchObjective, AdminUser, ActivityLog, Tool } from '@/types';
+import { TeamMember, NewsArticle, Vacancy, ResearchObjective, AdminUser, ActivityLog, Tool, AdminVideo } from '@/types';
 
 export const INITIAL_USERS: AdminUser[] = [
   {
@@ -441,3 +441,31 @@ export const INITIAL_TOOLS: Tool[] = [
     badge: 'Tool Showcase'
   }
 ];
+
+export const INITIAL_VIDEOS: AdminVideo[] = [
+  {
+    id: '9-a4MVHqZow',
+    title: 'SETLBI: Semantic Business Intelligence Platform Demo',
+    url: 'https://www.youtube.com/watch?v=9-a4MVHqZow',
+    thumbnail: 'https://img.youtube.com/vi/9-a4MVHqZow/hqdefault.jpg',
+    description: 'Demonstration of SETLBI platform combining Semantic Web and Business Intelligence technologies.',
+    order: 1,
+  },
+  {
+    id: 'J2VZUgkArZY',
+    title: 'BDAI Project Architecture & Sectoral Knowledge Graph Demo',
+    url: 'https://www.youtube.com/watch?v=J2VZUgkArZY',
+    thumbnail: 'https://img.youtube.com/vi/J2VZUgkArZY/hqdefault.jpg',
+    description: 'Comprehensive overview of the BanglaDesh Sectoral Knowledge Graphs and LLM reasoning pipeline.',
+    order: 2,
+  },
+  {
+    id: 'bdai-lab-preview',
+    title: 'BDAI Lab Video Preview & Facilities',
+    url: 'https://drive.google.com/drive/folders/1O7XGQ0k81bPCVmXFc-UZp8Bq7r7EajyL',
+    thumbnail: '/bdai-lab-preview.png',
+    description: 'Overview of BIKE Lab infrastructure, computing workstations, and research environment.',
+    order: 3,
+  },
+];
+

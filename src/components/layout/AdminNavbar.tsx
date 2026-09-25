@@ -21,6 +21,7 @@ import {
   Database,
   Handshake,
   Wrench,
+  PlayCircle,
 } from 'lucide-react';
 import { useAdmin } from '@/lib/store';
 
@@ -32,6 +33,7 @@ const NAV_ITEMS = [
   { name: 'Vacancies', href: '/dashboard/vacancies', icon: Briefcase },
   { name: 'Objectives', href: '/dashboard/objectives', icon: Target },
   { name: 'Tools', href: '/dashboard/tools', icon: Wrench },
+  { name: 'Videos', href: '/dashboard/videos', icon: PlayCircle },
   { name: 'Partners', href: '/dashboard/settings?tab=partners', icon: Handshake },
   { name: 'Database', href: '/dashboard/database', icon: Database },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },

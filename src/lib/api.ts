@@ -229,4 +229,22 @@ export const api = {
     apiRequest<any>(`/tools/${id}`, {
       method: 'DELETE',
     }),
+
+  // BDAI Videos Showcase
+  getVideos: () => apiRequest<any[]>('/videos'),
+  getVideo: (id: string) => apiRequest<any>(`/videos/${id}`),
+  createVideo: (videoData: any) =>
+    apiRequest<any>('/videos', {
+      method: 'POST',
+      body: JSON.stringify(videoData),
+    }),
+  updateVideo: (id: string, videoData: any) =>
+    apiRequest<any>(`/videos/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(videoData),
+    }),
+  deleteVideo: (id: string) =>
+    apiRequest<any>(`/videos/${id}`, {
+      method: 'DELETE',
+    }),
 };

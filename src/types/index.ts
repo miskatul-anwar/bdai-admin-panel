@@ -103,3 +103,15 @@ export interface Tool {
   createdAt?: string;
   updatedAt?: string;
 }
+
+export interface AdminVideo {
+  id: string;
+  title: string;
+  url: string;
+  thumbnail?: string;
+  description?: string;
+  postedAt?: string;
+  order?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
