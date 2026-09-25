@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAdmin } from '@/lib/store';
-import AdminNavbar from './AdminNavbar';
+import AdminSidebar from './AdminSidebar';
+import AdminHeader from './AdminHeader';
 import AdminFooter from './AdminFooter';
 import ToastContainer from '../ToastContainer';
 import Image from 'next/image';
@@ -13,6 +14,7 @@ export default function AdminLayoutWrapper({ children }: { children: React.React
   const pathname = usePathname();
   const { isAuthenticated, isInitialized } = useAdmin();
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (!isInitialized) return;
@@ -63,19 +65,25 @@ export default function AdminLayoutWrapper({ children }: { children: React.React
   }
 
   return (
-    <div className="min-h-screen bg-[#ecf0f1] font-sans flex flex-col justify-between">
-      <AdminNavbar />
+    <div className="min-h-screen bg-[#ecf0f1] font-sans flex">
+      {/* Modern Collapsible Left Sidebar */}
+      <AdminSidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
 
-      <div 
-        className="flex-1"
-        style={{ paddingTop: 'var(--admin-nav-height, 130px)' }}
-      >
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Main Workspace Column */}
+      <div className="flex-1 flex flex-col min-w-0 lg:pl-64">
+        {/* Top Header */}
+        <AdminHeader onOpenSidebar={() => setSidebarOpen(true)} />
+
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {children}
         </main>
+
+        <AdminFooter />
       </div>
 
-      <AdminFooter />
       <ToastContainer />
     </div>
   );
