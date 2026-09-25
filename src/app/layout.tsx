@@ -6,6 +6,14 @@ import AdminLayoutWrapper from '@/components/layout/AdminLayoutWrapper';
 export const metadata: Metadata = {
   title: 'BDAI — Control Panel',
   description: 'Control panel for BDAI laboratory',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/icon.png', type: 'image/png', sizes: '32x32' },
+    ],
+    apple: '/apple-icon.png',
+    shortcut: '/favicon.ico',
+  },
 };
 
 export default function RootLayout({
