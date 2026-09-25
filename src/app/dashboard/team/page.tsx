@@ -23,7 +23,7 @@ export default function TeamManagementPage() {
   const { team, addTeamMember, updateTeamMember, deleteTeamMember, canEdit, canDelete, isAdmin, user } = useAdmin();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedDesignation, setSelectedDesignation] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState('All');
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -32,6 +32,7 @@ export default function TeamManagementPage() {
   // Form State
   const [formData, setFormData] = useState({
     name: '',
+    category: 'Student Researchers',
     designation: '',
     institution: 'Department of CSE, University of Chittagong',
     email: '',
@@ -42,16 +43,42 @@ export default function TeamManagementPage() {
     order: 1,
   });
 
-  // Extract unique designations dynamically from current employees (No fixed categories!)
+  // Standard initial categories as requested
+  const standardCategories = [
+    'SPM Team',
+    'Student Researchers',
+    'Data Annotators',
+    'Administrative Staff',
+  ];
+
+  // Dynamic Categories (User can type any custom category, standard ones are suggested)
+  const dynamicCategories = [
+    'All',
+    ...Array.from(
+      new Set([
+        ...standardCategories,
+        ...team.map((m) => m.category?.trim()).filter(Boolean) as string[],
+      ])
+    ),
+  ];
+
+  // Dynamic Designations
   const dynamicDesignations = [
     'All',
-    ...Array.from(new Set(team.map((m) => m.designation?.trim()).filter(Boolean))),
+    ...Array.from(
+      new Set(
+        team
+          .map((m) => (m.designation || m.role)?.trim())
+          .filter(Boolean) as string[]
+      )
+    ),
   ];
 
   const handleOpenAdd = () => {
     setEditingMember(null);
     setFormData({
       name: '',
+      category: 'Student Researchers',
       designation: '',
       institution: 'Dept. of CSE, University of Chittagong',
       email: '',
@@ -68,6 +95,7 @@ export default function TeamManagementPage() {
     setEditingMember(member);
     setFormData({
       name: member.name,
+      category: member.category || 'Student Researchers',
       designation: member.designation || member.role || '',
       institution: member.institution,
       email: member.email,
@@ -87,7 +115,9 @@ export default function TeamManagementPage() {
     setIsSaving(true);
     const payload = {
       ...formData,
-      role: formData.designation, // keep role in sync
+      category: formData.category.trim(),
+      designation: formData.designation.trim(),
+      role: formData.designation.trim(), // keep role in sync
     };
 
     try {
@@ -108,20 +138,22 @@ export default function TeamManagementPage() {
     }
   };
 
-  // Filtered members by dynamic designation and search query
+  // Filtered members by category and search query
   const filteredTeam = team.filter((m) => {
+    const memberCat = (m.category || '').toLowerCase();
     const memberDesig = (m.designation || m.role || '').toLowerCase();
-    const matchesDesignation =
-      selectedDesignation === 'All' ||
-      memberDesig === selectedDesignation.toLowerCase();
+    const matchesCategory =
+      selectedCategory === 'All' ||
+      memberCat === selectedCategory.toLowerCase();
 
     const matchesSearch =
       m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       memberDesig.includes(searchQuery.toLowerCase()) ||
+      memberCat.includes(searchQuery.toLowerCase()) ||
       m.institution.toLowerCase().includes(searchQuery.toLowerCase()) ||
       m.email.toLowerCase().includes(searchQuery.toLowerCase());
 
-    return matchesDesignation && matchesSearch;
+    return matchesCategory && matchesSearch;
   });
 
   return (
@@ -135,7 +167,7 @@ export default function TeamManagementPage() {
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-[#0c2461]">Team Directory</h1>
             <p className="text-sm text-gray-500">
-              Manage project personnel with custom, fully editable designations
+              Category + Designation = Employee placement • Fully customizable
             </p>
           </div>
         </div>
@@ -165,27 +197,27 @@ export default function TeamManagementPage() {
               Admin-Only Personnel Authority ({user?.role} Mode)
             </p>
             <p className="text-xs text-amber-700 mt-0.5">
-              By administrative policy, <strong>Only Admins</strong> can Add or Remove all kinds of employees across any designation. You can switch to an Admin account in the top navigation bar to manage employees.
+              By administrative policy, <strong>Only Admins</strong> can Add or Remove employees across any category. You can switch to an Admin account in the top navigation bar to manage employees.
             </p>
           </div>
         </div>
       )}
 
-      {/* ── Dynamic Designation Filter Bar (No fixed categories) ── */}
+      {/* ── Dynamic Category Filter Bar (Customizable Categories) ── */}
       <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-center">
-        {/* Dynamic Designation Pills */}
+        {/* Dynamic Category Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 scrollbar-hide">
-          {dynamicDesignations.map((desig) => (
+          {dynamicCategories.map((cat) => (
             <button
-              key={desig}
-              onClick={() => setSelectedDesignation(desig)}
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
               className={`px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer whitespace-nowrap ${
-                selectedDesignation === desig
+                selectedCategory === cat
                   ? 'bg-[#0c2461] text-white shadow-xs'
                   : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
-              {desig}
+              {cat}
             </button>
           ))}
         </div>
@@ -195,7 +227,7 @@ export default function TeamManagementPage() {
           <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search by name, designation, email..."
+            placeholder="Search by name, category, designation..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-gray-400 focus:outline-none focus:border-[#0c2461]"
@@ -210,7 +242,7 @@ export default function TeamManagementPage() {
             Personnel Roster ({filteredTeam.length} Members)
           </h2>
           <span className="text-xs text-gray-500">
-            Filtering by: <strong className="text-[#0c2461]">{selectedDesignation}</strong>
+            Category Filter: <strong className="text-[#0c2461]">{selectedCategory}</strong>
           </span>
         </div>
 
@@ -230,10 +262,15 @@ export default function TeamManagementPage() {
               </div>
 
               <div>
-                {/* Editable Custom Designation Badge */}
-                <span className="inline-block text-[10px] font-black uppercase tracking-widest text-white bg-[#0c2461] rounded px-2.5 py-0.5 mb-1.5 shadow-xs">
-                  {member.designation || member.role || 'Member'}
-                </span>
+                {/* Category & Designation Badges */}
+                <div className="flex items-center justify-center gap-1.5 mb-1.5 flex-wrap">
+                  <span className="inline-block text-[10px] font-medium text-slate-600 bg-slate-100 border border-slate-200 rounded px-2 py-0.5 shadow-xs">
+                    {member.category || 'General'}
+                  </span>
+                  <span className="inline-block text-[10px] font-black uppercase tracking-widest text-white bg-[#0c2461] rounded px-2.5 py-0.5 shadow-xs">
+                    {member.designation || member.role || 'Member'}
+                  </span>
+                </div>
                 <p className="font-semibold text-[#0c2461] text-sm leading-snug">
                   {member.name}
                 </p>
@@ -291,14 +328,60 @@ export default function TeamManagementPage() {
         )}
       </div>
 
-      {/* ── Add / Edit Modal (Editable Designation, No fixed categories) ── */}
+      {/* ── Add / Edit Modal (Customizable Category + Designation = Placement) ── */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={editingMember ? 'Edit Employee Details' : 'Add Employee'}
-        subtitle="Specify any custom designation — there are no fixed category restrictions"
+        subtitle="Category + Designation = Employee placement. Free text input with suggestions."
       >
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Category Input (Under which category he falls) */}
+          <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2.5">
+            <label className="block text-xs font-semibold text-[#0c2461] flex items-center justify-between">
+              <span>Category (Section Placement) *</span>
+              <span className="text-[10px] text-blue-600 font-medium">Customizable Text Input</span>
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              list="category-suggestions"
+              className="w-full px-3 py-2 text-xs rounded-xl bg-white border border-slate-200 focus:outline-none focus:border-[#0c2461]"
+              placeholder="e.g. SPM Team, Student Researchers, Data Annotators, Administrative Staff, or custom..."
+            />
+            <datalist id="category-suggestions">
+              {dynamicCategories
+                .filter((c) => c !== 'All')
+                .map((c) => (
+                  <option key={c} value={c} />
+                ))}
+            </datalist>
+
+            {/* Quick-choice chips */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              <span className="text-[10px] text-slate-500 font-medium mr-1">Standard:</span>
+              {standardCategories.map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, category: cat })}
+                  className={`text-[10px] px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                    formData.category.trim().toLowerCase() === cat.toLowerCase()
+                      ? 'bg-[#0c2461] text-white border-[#0c2461] shadow-xs'
+                      : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-slate-500">
+              <strong>Category + Designation = Placement:</strong> Category groups the employee under the corresponding section on the website. Type any custom category freely.
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-[#0c2461] mb-1">
@@ -316,7 +399,7 @@ export default function TeamManagementPage() {
 
             <div>
               <label className="block text-xs font-semibold text-[#0c2461] mb-1 flex items-center justify-between">
-                <span>Designation *</span>
+                <span>Designation (Role Title) *</span>
                 <span className="text-[10px] text-blue-600 font-normal">Fully Customizable</span>
               </label>
               <input

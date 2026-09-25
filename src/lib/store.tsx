@@ -136,12 +136,39 @@ const STORAGE_KEYS = {
 
 // Normalization helpers between Rust snake_case and frontend models
 function normalizeTeamMember(m: any): TeamMember {
+  let category = (m.category || '').trim();
+  if (category.toLowerCase() === 'lead' || category.toLowerCase() === 'co-lead') {
+    category = 'SPM Team';
+  } else if (category.toLowerCase() === 'research-assistant' || category.toLowerCase() === 'researcher') {
+    const des = (m.designation || '').toLowerCase();
+    const role = (m.role || '').toLowerCase();
+    if (des.includes('annotat') || role.includes('annotat')) {
+      category = 'Data Annotators';
+    } else {
+      category = 'Student Researchers';
+    }
+  } else if (category.toLowerCase() === 'staff') {
+    category = 'Administrative Staff';
+  } else if (!category) {
+    const des = (m.designation || '').toLowerCase();
+    const role = (m.role || '').toLowerCase();
+    if (des.includes('spm') || des.includes('professor') || role.includes('spm')) {
+      category = 'SPM Team';
+    } else if (des.includes('annotat') || role.includes('annotat')) {
+      category = 'Data Annotators';
+    } else if (des.includes('manager') || des.includes('accountant') || des.includes('office')) {
+      category = 'Administrative Staff';
+    } else {
+      category = 'Student Researchers';
+    }
+  }
+
   return {
     id: m.id,
     name: m.name,
     designation: m.designation,
     role: m.role || '',
-    category: m.category || '',
+    category: category,
     institution: m.institution || 'Department of Computer Science and Engineering, University of Chittagong',
     email: m.email || '',
     bio: m.bio || '',
