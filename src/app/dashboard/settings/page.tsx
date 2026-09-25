@@ -1,8 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Image from 'next/image';
+import { useSearchParams } from 'next/navigation';
 import { useAdmin } from '@/lib/store';
+import { api } from '@/lib/api';
+import ImageUpload from '@/components/ui/ImageUpload';
 import {
   Settings,
   RotateCcw,
@@ -27,7 +30,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 
-export default function SettingsPage() {
+function SettingsPageContent() {
   const {
     user,
     resetToDemoData,
@@ -46,6 +49,16 @@ export default function SettingsPage() {
 
   const [activeTab, setActiveTab] = useState<'stats' | 'hero' | 'about' | 'sectors' | 'partners' | 'work_packages' | 'publications' | 'reports' | 'contact' | 'system'>('stats');
   const [saving, setSaving] = useState<string | null>(null);
+
+  const searchParams = useSearchParams();
+
+  // Sync tab from URL if ?tab=partners etc.
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['stats', 'hero', 'about', 'sectors', 'partners', 'work_packages', 'publications', 'reports', 'contact', 'system'].includes(tabParam)) {
+      setActiveTab(tabParam as any);
+    }
+  }, [searchParams]);
 
   // Local editable states synced from settings
   const [statsData, setStatsData] = useState<any[]>([]);
@@ -77,6 +90,12 @@ export default function SettingsPage() {
     try {
       setSaving(sectionId);
       await updateSiteSetting(sectionId, dataToSave);
+      // Synchronize directly with backend API as well
+      try {
+        await api.updateSetting(sectionId, dataToSave);
+      } catch {
+        // Direct DB update already succeeded
+      }
     } catch {
       // error handled in store toast
     } finally {
@@ -705,29 +724,29 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-600 block mb-1">Logo URL or Path</label>
-                    <input
-                      type="text"
+                    <ImageUpload
                       value={part.logo || ''}
-                      onChange={(e) => {
+                      onChange={(url) => {
                         const updated = [...partnersData];
-                        updated[idx].logo = e.target.value;
+                        updated[idx].logo = url;
                         setPartnersData(updated);
                       }}
-                      className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 bg-white focus:outline-none"
-                      placeholder="/partners/bike.png or https://..."
+                      label="Organization Logo"
+                      folder="partners"
+                      helperText="Upload official logo to Cloudinary or specify URL"
                     />
                   </div>
                   <div>
                     <label className="text-[11px] font-semibold text-slate-600 block mb-1">Official Website URL</label>
                     <input
                       type="text"
-                      value={part.url || ''}
+                      value={part.url || part.website || ''}
                       onChange={(e) => {
                         const updated = [...partnersData];
                         updated[idx].url = e.target.value;
+                        updated[idx].website = e.target.value;
                         setPartnersData(updated);
                       }}
                       className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 bg-white focus:outline-none"
@@ -740,10 +759,11 @@ export default function SettingsPage() {
                   <label className="text-[11px] font-semibold text-slate-600 block mb-1">Description / Mission</label>
                   <textarea
                     rows={2}
-                    value={part.desc || ''}
+                    value={part.desc || part.description || ''}
                     onChange={(e) => {
                       const updated = [...partnersData];
                       updated[idx].desc = e.target.value;
+                      updated[idx].description = e.target.value;
                       setPartnersData(updated);
                     }}
                     className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 bg-white focus:outline-none"
@@ -1373,5 +1393,13 @@ export default function SettingsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-400">Loading settings...</div>}>
+      <SettingsPageContent />
+    </Suspense>
   );
 }

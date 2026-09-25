@@ -184,4 +184,31 @@ export const api = {
 
   // Activity logs
   getActivities: () => apiRequest<any[]>('/activities'),
+
+  // Site Settings (Dynamic Portal Content)
+  getSettings: () => apiRequest<Record<string, any>>('/settings'),
+  getSetting: (id: string) => apiRequest<any>(`/settings/${id}`),
+  updateSetting: (id: string, data: any) =>
+    apiRequest<any>(`/settings/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ data }),
+    }),
+
+  // Consortium Partners & Affiliates
+  getPartners: () => apiRequest<any[]>('/partners'),
+  getPartner: (id: string) => apiRequest<any>(`/partners/${id}`),
+  createPartner: (partnerData: any) =>
+    apiRequest<any>('/partners', {
+      method: 'POST',
+      body: JSON.stringify(partnerData),
+    }),
+  updatePartner: (id: string, partnerData: any) =>
+    apiRequest<any>(`/partners/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(partnerData),
+    }),
+  deletePartner: (id: string) =>
+    apiRequest<any>(`/partners/${id}`, {
+      method: 'DELETE',
+    }),
 };

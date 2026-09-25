@@ -99,9 +99,6 @@ export default function ImageUpload({
             <LinkIcon className="w-2.5 h-2.5" />
             <span>{showUrlInput ? 'Hide URL input' : 'Direct URL'}</span>
           </button>
-          <span className="text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200">
-            Cloudinary
-          </span>
         </div>
       </div>
 

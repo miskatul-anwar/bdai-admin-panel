@@ -189,20 +189,9 @@ export default function DatabaseConsolePage() {
           <div className="w-12 h-12 rounded-xl bg-[#0c2461] text-white flex items-center justify-center shrink-0 shadow-md">
             <Database className="w-6 h-6" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
+            <div>
               <h1 className="text-xl font-bold text-[#0c2461]">Direct Database Console</h1>
-              <span
-                className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${
-                  isLiveBackend
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                    : 'bg-amber-50 text-amber-700 border-amber-300'
-                }`}
-              >
-                {isLiveBackend ? 'Supabase Live Connected' : 'Supabase PostgreSQL'}
-              </span>
-            </div>
-            <p className="text-xs text-gray-500 mt-0.5">
+              <p className="text-xs text-gray-500 mt-0.5">
               Inspect schemas, query rows, and perform direct SQL transactions on Supabase PostgreSQL
             </p>
           </div>
