@@ -119,7 +119,7 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                 BD<span className="text-[#60a5fa]">AI</span>
               </span>
               <span className="text-[10px] text-white/60 tracking-wider font-medium mt-0.5">
-                Research Management
+                Control Panel
               </span>
             </div>
           </Link>
