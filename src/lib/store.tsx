@@ -45,6 +45,8 @@ import {
   dbGetSettings,
   dbUpdateSetting,
 } from './supabase-db';
+import { setCookie, deleteCookie } from './cookies';
+import { api } from './api';
 
 interface Toast {
   id: string;
@@ -407,8 +409,10 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
   const loginWithUser = (userData: AdminUser, token?: string) => {
     setUser(userData);
     localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
+    setCookie('bdai_user_session', userData.username || userData.email, 3);
     if (token) {
       localStorage.setItem('bdai_auth_token', token);
+      setCookie('bdai_access_token', token, 3);
     }
     showToast(`Signed in as ${userData.name} (${userData.role})`, 'success');
   };
@@ -418,6 +422,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     if (target) {
       setUser(target);
       localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(target));
+      setCookie('bdai_user_session', target.username || target.email, 3);
       showToast(`Switched active profile to ${target.name} (${target.role})`, 'info');
     }
   };
@@ -426,6 +431,9 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     localStorage.removeItem(STORAGE_KEYS.USER);
     localStorage.removeItem('bdai_auth_token');
+    deleteCookie('bdai_user_session');
+    deleteCookie('bdai_access_token');
+    api.logout().catch(() => {});
     showToast('Signed out of admin console', 'info');
   };
 

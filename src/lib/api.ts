@@ -3,6 +3,8 @@
  * Connects to the Rust Backend (Axum + Supabase PostgreSQL) at http://localhost:8080/api
  */
 
+import { getCookie } from './cookies';
+
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
 
@@ -10,7 +12,10 @@ async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('bdai_auth_token') : null;
+  let token = typeof window !== 'undefined' ? localStorage.getItem('bdai_auth_token') : null;
+  if (!token) {
+    token = getCookie('bdai_access_token');
+  }
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -25,6 +30,7 @@ async function apiRequest<T>(
   const res = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers,
+    credentials: 'include', // Automatically passes and receives secure HTTP-only cookies
   });
 
   if (!res.ok) {
@@ -45,7 +51,7 @@ export const api = {
   // Health
   checkHealth: () => apiRequest<{ status: string; database: string }>('/health'),
 
-  // Auth (JWT Access Tokens)
+  // Auth (JWT Access Tokens & Cookies)
   login: (usernameOrEmail: string, password: string) =>
     apiRequest<{
       token: string;
@@ -65,6 +71,10 @@ export const api = {
       expires_in: number;
       user: any;
     }>('/auth/refresh', {
+      method: 'POST',
+    }),
+  logout: () =>
+    apiRequest<{ message: string }>('/auth/logout', {
       method: 'POST',
     }),
   verifyToken: (token?: string) =>
