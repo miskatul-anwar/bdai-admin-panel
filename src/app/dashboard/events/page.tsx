@@ -18,6 +18,8 @@ import {
   Loader2,
   Link as LinkIcon,
   CheckCircle2,
+  Columns,
+  FileText,
 } from 'lucide-react';
 import { useAdmin } from '@/lib/store';
 import { EventItem, EventGalleryItem } from '@/types';
@@ -74,6 +76,7 @@ export default function EventsManagementPage() {
   const [pickerDate, setPickerDate] = useState('');
   const [pickerTime, setPickerTime] = useState('');
   const [showCustomDateDisplay, setShowCustomDateDisplay] = useState(false);
+  const [activeModalTab, setActiveModalTab] = useState<'side-by-side' | 'details' | 'media'>('side-by-side');
 
   // Delete Confirmation Modal State
   const [deleteTarget, setDeleteTarget] = useState<EventItem | null>(null);
@@ -139,6 +142,7 @@ export default function EventsManagementPage() {
     setNewGalleryAlt('');
     setGalleryUploadError(null);
     setShowUrlAdd(false);
+    setActiveModalTab('side-by-side');
     setIsModalOpen(true);
   };
 
@@ -149,6 +153,7 @@ export default function EventsManagementPage() {
     setPickerDate(extracted.date);
     setPickerTime(extracted.time);
     setShowCustomDateDisplay(false);
+    setActiveModalTab('side-by-side');
     setFormData({
       title: event.title,
       date: event.date,
@@ -509,347 +514,504 @@ export default function EventsManagementPage() {
 
       {/* Add / Edit Event Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 my-8">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-6">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">
-                  {editingEvent ? 'Edit Event' : 'Add New Event'}
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Set event details, status, banner graphic, and gallery snapshots.
-                </p>
-              </div>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Title */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Event Title *
-                </label>
-                <textarea
-                  required
-                  rows={2}
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="e.g. Professor Dr. Debasish Ghose delivers intensive quality paper writing workshop"
-                  className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0c2461]/20 focus:border-[#0c2461]"
-                />
-              </div>
-
-              {/* Event Date, Time & Status Picker */}
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-[#0c2461]" />
-                    Date & Time Picker *
-                  </span>
-                  {formData.date && (
-                    <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-emerald-600" />
-                      {formData.date}
-                    </span>
-                  )}
-                </div>
-
-                <div className="grid sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                      Event Date *
-                    </label>
-                    <input
-                      type="date"
-                      required
-                      value={pickerDate}
-                      onChange={(e) => handleDateChange(e.target.value, pickerTime)}
-                      className="w-full px-3 py-2 text-sm bg-white rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0c2461]/20 focus:border-[#0c2461] transition-colors"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                      Time (Optional)
-                    </label>
-                    <input
-                      type="time"
-                      value={pickerTime}
-                      onChange={(e) => handleDateChange(pickerDate, e.target.value)}
-                      className="w-full px-3 py-2 text-sm bg-white rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0c2461]/20 focus:border-[#0c2461] transition-colors"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                      Event Status *
-                    </label>
-                    <select
-                      value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value as 'held' | 'upcoming' })}
-                      className="w-full px-3 py-2 text-sm bg-white rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0c2461]/20 focus:border-[#0c2461] transition-colors"
-                    >
-                      <option value="held">Held (Archive with photos)</option>
-                      <option value="upcoming">Upcoming (Future schedule)</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Display Text & Customization Toggle */}
-                <div className="pt-1.5 border-t border-slate-200/60 flex flex-col gap-1">
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-slate-500 font-medium">Display on website & cards:</span>
-                    <button
-                      type="button"
-                      onClick={() => setShowCustomDateDisplay(!showCustomDateDisplay)}
-                      className="text-[#0c2461] hover:underline font-semibold cursor-pointer"
-                    >
-                      {showCustomDateDisplay ? 'Use standard auto-format' : 'Customize display text'}
-                    </button>
-                  </div>
-                  {showCustomDateDisplay ? (
-                    <input
-                      type="text"
-                      required
-                      value={formData.date}
-                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                      placeholder="e.g. 29th July 2026 or 2.00PM · 19th May 2026"
-                      className="w-full px-3 py-1.5 text-xs bg-white rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0c2461]/20"
-                    />
-                  ) : (
-                    <p className="text-xs text-slate-700 font-medium bg-white px-3 py-1.5 rounded-lg border border-slate-200/70">
-                      {formData.date || 'Please select a date above'}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Category & Location */}
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                    Category
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    placeholder="e.g. Workshop, Seminar, PhD Seminar"
-                    className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0c2461]/20 focus:border-[#0c2461]"
-                  />
-                  {/* Category Pills */}
-                  <div className="flex flex-wrap gap-1 mt-1.5">
-                    {CATEGORY_SUGGESTIONS.map((cat) => (
-                      <button
-                        key={cat}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, category: cat })}
-                        className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-600 cursor-pointer"
-                      >
-                        {cat}
-                      </button>
-                    ))}
-                  </div>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-hidden animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl sm:rounded-3xl max-w-5xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
+            {/* Modal Header (Fixed at top) */}
+            <div className="px-5 sm:px-7 py-3.5 sm:py-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#0c2461]/10 text-[#0c2461] flex items-center justify-center font-bold">
+                  {editingEvent ? <Edit className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                    Location
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.location || ''}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    placeholder="e.g. BDAI Lab, Department of CSE, University of Chittagong"
-                    className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0c2461]/20 focus:border-[#0c2461]"
-                  />
-                </div>
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Detailed Description (Optional)
-                </label>
-                <textarea
-                  rows={3}
-                  value={formData.description || ''}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Provide background, key participants, and discussion highlights..."
-                  className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0c2461]/20 focus:border-[#0c2461]"
-                />
-              </div>
-
-              {/* Banner Image */}
-              <div>
-                <ImageUpload
-                  label="Event Banner Image *"
-                  value={formData.banner}
-                  onChange={(url) => setFormData({ ...formData, banner: url })}
-                  folder="bdai/events"
-                  helperText="Upload official announcement poster or supply image URL (e.g. /events/workshop_banner.jpeg)"
-                />
-              </div>
-
-              {/* Gallery Snapshots Manager */}
-              <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50/50 space-y-4">
-                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <ImageIcon className="w-4 h-4 text-[#0c2461]" />
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                      Gallery Snapshots ({formData.gallery.length})
+                    <h3 className="text-base sm:text-lg font-bold text-slate-900">
+                      {editingEvent ? 'Edit Event' : 'Add New Event'}
+                    </h3>
+                    <span
+                      className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
+                        formData.status === 'upcoming'
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-emerald-100 text-emerald-800'
+                      }`}
+                    >
+                      {formData.status === 'upcoming' ? 'Upcoming' : 'Held'}
                     </span>
                   </div>
+                  <p className="text-xs text-slate-500 hidden sm:block">
+                    {editingEvent
+                      ? 'Modify event timing, details, banner, and gallery snapshots.'
+                      : 'Fill in schedule and media details below.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* View Switcher / Tabs for Desktop & Mobile */}
+              <div className="flex items-center gap-2">
+                <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1 text-xs">
                   <button
                     type="button"
-                    onClick={() => setShowUrlAdd(!showUrlAdd)}
-                    className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
+                    onClick={() => setActiveModalTab('side-by-side')}
+                    className={`hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                      activeModalTab === 'side-by-side'
+                        ? 'bg-white text-slate-900 shadow-xs'
+                        : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                    title="2-Column Side-by-Side View (PC View)"
                   >
-                    <LinkIcon className="w-3 h-3" />
-                    <span>{showUrlAdd ? 'Hide URL input' : 'Add via Image URL'}</span>
+                    <Columns className="w-3.5 h-3.5 text-[#0c2461]" />
+                    <span>Split View</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveModalTab('details')}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                      activeModalTab === 'details'
+                        ? 'bg-white text-slate-900 shadow-xs'
+                        : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>Details</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveModalTab('media')}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                      activeModalTab === 'media'
+                        ? 'bg-white text-slate-900 shadow-xs'
+                        : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    <ImageIcon className="w-3.5 h-3.5" />
+                    <span>Media & Gallery</span>
+                    {formData.gallery.length > 0 && (
+                      <span className="w-4 h-4 rounded-full bg-[#0c2461] text-white text-[10px] flex items-center justify-center font-bold">
+                        {formData.gallery.length}
+                      </span>
+                    )}
                   </button>
                 </div>
 
-                {/* Direct Upload Drag & Drop Area */}
-                <div
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setIsDragging(true);
-                  }}
-                  onDragLeave={() => setIsDragging(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setIsDragging(false);
-                    if (e.dataTransfer.files) handleUploadGalleryFiles(e.dataTransfer.files);
-                  }}
-                  onClick={() => galleryFileInputRef.current?.click()}
-                  className={`cursor-pointer border-2 border-dashed rounded-2xl p-5 text-center transition-all ${
-                    isDragging
-                      ? 'border-blue-500 bg-blue-50/50 scale-[0.99]'
-                      : 'border-slate-300 hover:border-[#0c2461] hover:bg-slate-100/70 bg-white'
-                  } ${isUploadingGallery ? 'pointer-events-none opacity-80' : ''}`}
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors ml-1"
                 >
-                  <input
-                    ref={galleryFileInputRef}
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={(e) => e.target.files && handleUploadGalleryFiles(e.target.files)}
-                    className="hidden"
-                  />
-                  {isUploadingGallery ? (
-                    <div className="flex flex-col items-center justify-center py-2 text-[#0c2461]">
-                      <Loader2 className="w-6 h-6 animate-spin text-blue-600 mb-2" />
-                      <p className="text-xs font-semibold text-slate-800">
-                        {uploadProgressText || 'Uploading photos to Cloudinary CDN...'}
-                      </p>
-                      <p className="text-[10px] text-slate-400 mt-0.5">
-                        Please wait while photos are optimized and uploaded
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center">
-                      <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-2">
-                        <UploadCloud className="w-5 h-5" />
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Scrollable Form Body */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50/40">
+              <form id="event-form" onSubmit={handleSubmit}>
+                <div
+                  className={
+                    activeModalTab === 'side-by-side'
+                      ? 'grid grid-cols-1 lg:grid-cols-12 gap-6'
+                      : 'max-w-2xl mx-auto space-y-5'
+                  }
+                >
+                  {/* Left Column / Details Section */}
+                  {(activeModalTab === 'side-by-side' || activeModalTab === 'details') && (
+                    <div
+                      className={
+                        activeModalTab === 'side-by-side'
+                          ? 'lg:col-span-7 space-y-4'
+                          : 'space-y-4'
+                      }
+                    >
+                      {/* Title */}
+                      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                          Event Title *
+                        </label>
+                        <textarea
+                          required
+                          rows={2}
+                          value={formData.title}
+                          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                          placeholder="e.g. Professor Dr. Debasish Ghose delivers intensive quality paper writing workshop"
+                          className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0c2461]/20 focus:border-[#0c2461] transition-all"
+                        />
                       </div>
-                      <p className="text-xs font-bold text-slate-800">
-                        Click to upload or drag & drop event photos
-                      </p>
-                      <p className="text-[10px] text-slate-500 mt-1">
-                        PNG, JPG, WebP up to 10MB each • Select multiple photos at once
-                      </p>
+
+                      {/* Event Date, Time & Status Picker */}
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3 shadow-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 text-[#0c2461]" />
+                            Date, Time & Status *
+                          </span>
+                          {formData.date && (
+                            <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full flex items-center gap-1 max-w-[220px] truncate">
+                              <Clock className="w-3 h-3 text-emerald-600 shrink-0" />
+                              <span className="truncate">{formData.date}</span>
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                              Date *
+                            </label>
+                            <input
+                              type="date"
+                              required
+                              value={pickerDate}
+                              onChange={(e) => handleDateChange(e.target.value, pickerTime)}
+                              className="w-full px-2.5 py-1.5 text-xs bg-slate-50 hover:bg-white focus:bg-white rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0c2461]/20 focus:border-[#0c2461] transition-colors"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                              Time (Optional)
+                            </label>
+                            <input
+                              type="time"
+                              value={pickerTime}
+                              onChange={(e) => handleDateChange(pickerDate, e.target.value)}
+                              className="w-full px-2.5 py-1.5 text-xs bg-slate-50 hover:bg-white focus:bg-white rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0c2461]/20 focus:border-[#0c2461] transition-colors"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                              Status *
+                            </label>
+                            <select
+                              value={formData.status}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  status: e.target.value as 'held' | 'upcoming',
+                                })
+                              }
+                              className="w-full px-2.5 py-1.5 text-xs bg-slate-50 hover:bg-white focus:bg-white rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0c2461]/20 focus:border-[#0c2461] transition-colors"
+                            >
+                              <option value="held">Held (Archive)</option>
+                              <option value="upcoming">Upcoming (Future)</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Display Text & Customization Toggle */}
+                        <div className="pt-2 border-t border-slate-100 flex flex-col gap-1">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-slate-500 font-medium">Display on website cards:</span>
+                            <button
+                              type="button"
+                              onClick={() => setShowCustomDateDisplay(!showCustomDateDisplay)}
+                              className="text-[#0c2461] hover:underline font-semibold cursor-pointer"
+                            >
+                              {showCustomDateDisplay ? 'Use auto-format' : 'Customize text'}
+                            </button>
+                          </div>
+                          {showCustomDateDisplay ? (
+                            <input
+                              type="text"
+                              required
+                              value={formData.date}
+                              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                              placeholder="e.g. 29th July 2026 or 2.00PM · 19th May 2026"
+                              className="w-full px-2.5 py-1 text-xs bg-white rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0c2461]/20"
+                            />
+                          ) : (
+                            <p className="text-xs text-slate-700 font-medium bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200/60 truncate">
+                              {formData.date || 'Please select a date above'}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Category & Location */}
+                      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                              Category
+                            </label>
+                            <input
+                              type="text"
+                              value={formData.category}
+                              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                              placeholder="e.g. Workshop, Seminar"
+                              className="w-full px-3 py-1.5 text-xs bg-slate-50 hover:bg-white focus:bg-white rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0c2461]/20 focus:border-[#0c2461]"
+                            />
+                            {/* Category Pills */}
+                            <div className="flex flex-wrap gap-1 mt-1.5">
+                              {CATEGORY_SUGGESTIONS.map((cat) => (
+                                <button
+                                  key={cat}
+                                  type="button"
+                                  onClick={() => setFormData({ ...formData, category: cat })}
+                                  className={`text-[10px] px-2 py-0.5 rounded-md cursor-pointer transition-colors ${
+                                    formData.category === cat
+                                      ? 'bg-[#0c2461] text-white font-semibold'
+                                      : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                                  }`}
+                                >
+                                  {cat}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                              Location
+                            </label>
+                            <input
+                              type="text"
+                              value={formData.location || ''}
+                              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                              placeholder="e.g. BDAI Lab, Dept of CSE, CU"
+                              className="w-full px-3 py-1.5 text-xs bg-slate-50 hover:bg-white focus:bg-white rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0c2461]/20 focus:border-[#0c2461]"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Description */}
+                        <div>
+                          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                            Detailed Description (Optional)
+                          </label>
+                          <textarea
+                            rows={3}
+                            value={formData.description || ''}
+                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                            placeholder="Provide background, key participants, and discussion highlights..."
+                            className="w-full px-3 py-2 text-xs bg-slate-50 hover:bg-white focus:bg-white rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0c2461]/20 focus:border-[#0c2461]"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Helper to switch to media when in single-tab view */}
+                      {activeModalTab === 'details' && (
+                        <div className="flex justify-end pt-2">
+                          <button
+                            type="button"
+                            onClick={() => setActiveModalTab('media')}
+                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition-colors cursor-pointer"
+                          >
+                            <span>Continue to Media & Gallery</span>
+                            <ImageIcon className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Right Column / Media & Gallery Section */}
+                  {(activeModalTab === 'side-by-side' || activeModalTab === 'media') && (
+                    <div
+                      className={
+                        activeModalTab === 'side-by-side'
+                          ? 'lg:col-span-5 space-y-4'
+                          : 'space-y-4'
+                      }
+                    >
+                      {/* Banner Image */}
+                      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+                        <ImageUpload
+                          label="Event Banner Image *"
+                          value={formData.banner}
+                          onChange={(url) => setFormData({ ...formData, banner: url })}
+                          folder="bdai/events"
+                          helperText="Official poster or graphic (e.g. /events/workshop_banner.jpeg)"
+                        />
+                      </div>
+
+                      {/* Gallery Snapshots Manager */}
+                      <div className="border border-slate-200 rounded-2xl p-4 bg-white space-y-3.5 shadow-xs">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <ImageIcon className="w-4 h-4 text-[#0c2461]" />
+                            <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                              Gallery Snapshots ({formData.gallery.length})
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setShowUrlAdd(!showUrlAdd)}
+                            className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
+                          >
+                            <LinkIcon className="w-3 h-3" />
+                            <span>{showUrlAdd ? 'Hide URL' : 'Add via URL'}</span>
+                          </button>
+                        </div>
+
+                        {/* Direct Upload Drag & Drop Area */}
+                        <div
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            setIsDragging(true);
+                          }}
+                          onDragLeave={() => setIsDragging(false)}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            setIsDragging(false);
+                            if (e.dataTransfer.files) handleUploadGalleryFiles(e.dataTransfer.files);
+                          }}
+                          onClick={() => galleryFileInputRef.current?.click()}
+                          className={`cursor-pointer border-2 border-dashed rounded-xl p-4 text-center transition-all ${
+                            isDragging
+                              ? 'border-blue-500 bg-blue-50/50 scale-[0.99]'
+                              : 'border-slate-300 hover:border-[#0c2461] hover:bg-slate-50 bg-slate-50/50'
+                          } ${isUploadingGallery ? 'pointer-events-none opacity-80' : ''}`}
+                        >
+                          <input
+                            ref={galleryFileInputRef}
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            onChange={(e) =>
+                              e.target.files && handleUploadGalleryFiles(e.target.files)
+                            }
+                            className="hidden"
+                          />
+                          {isUploadingGallery ? (
+                            <div className="flex flex-col items-center justify-center py-1 text-[#0c2461]">
+                              <Loader2 className="w-5 h-5 animate-spin text-blue-600 mb-1.5" />
+                              <p className="text-xs font-semibold text-slate-800">
+                                {uploadProgressText || 'Uploading to Cloudinary CDN...'}
+                              </p>
+                              <p className="text-[10px] text-slate-400 mt-0.5">
+                                Please wait while photos are optimized
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center">
+                              <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-1.5">
+                                <UploadCloud className="w-4.5 h-4.5" />
+                              </div>
+                              <p className="text-xs font-bold text-slate-800">
+                                Click to upload or drag & drop event photos
+                              </p>
+                              <p className="text-[10px] text-slate-500 mt-0.5">
+                                PNG, JPG, WebP up to 10MB each • Select multiple
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {galleryUploadError && (
+                          <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+                            <AlertTriangle className="w-4 h-4 shrink-0" />
+                            <span>{galleryUploadError}</span>
+                          </div>
+                        )}
+
+                        {/* Optional Direct URL Addition */}
+                        {showUrlAdd && (
+                          <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+                            <p className="text-xs font-semibold text-slate-700">
+                              Add Snapshot via Direct URL
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <input
+                                type="text"
+                                value={newGallerySrc}
+                                onChange={(e) => setNewGallerySrc(e.target.value)}
+                                placeholder="Image URL or /events/photo.jpeg"
+                                className="w-full px-2.5 py-1 text-xs bg-white rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-[#0c2461]"
+                              />
+                              <input
+                                type="text"
+                                value={newGalleryAlt}
+                                onChange={(e) => setNewGalleryAlt(e.target.value)}
+                                placeholder="Short caption / alt text"
+                                className="w-full px-2.5 py-1 text-xs bg-white rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-[#0c2461]"
+                              />
+                            </div>
+                            <div className="flex justify-end">
+                              <button
+                                type="button"
+                                onClick={handleAddGalleryItem}
+                                disabled={!newGallerySrc.trim()}
+                                className="px-3 py-1 rounded-lg bg-[#0c2461] hover:bg-[#091b48] text-white text-xs font-semibold disabled:opacity-50 transition-colors cursor-pointer"
+                              >
+                                + Add to Gallery
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Existing Snapshots List with In-Line Caption Editing */}
+                        {formData.gallery.length > 0 && (
+                          <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                              Current Snapshots ({formData.gallery.length})
+                            </p>
+                            {formData.gallery.map((snap, idx) => (
+                              <div
+                                key={idx}
+                                className="flex items-center gap-2.5 bg-slate-50 p-2 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors"
+                              >
+                                <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-slate-100 relative border border-slate-200">
+                                  <img
+                                    src={snap.src}
+                                    alt={snap.alt}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                                <div className="flex-1 min-w-0 space-y-0.5">
+                                  <input
+                                    type="text"
+                                    value={snap.alt}
+                                    onChange={(e) => handleUpdateGalleryCaption(idx, e.target.value)}
+                                    placeholder="Snapshot caption..."
+                                    className="w-full text-xs font-medium text-slate-800 px-2 py-0.5 rounded border border-slate-200 bg-white focus:outline-none focus:ring-1 focus:ring-[#0c2461]"
+                                  />
+                                  <p className="text-[10px] text-slate-400 truncate px-0.5">{snap.src}</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveGalleryItem(idx)}
+                                  className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                  title="Remove snapshot"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Helper to switch to details when in single-tab view */}
+                      {activeModalTab === 'media' && (
+                        <div className="flex justify-start pt-2">
+                          <button
+                            type="button"
+                            onClick={() => setActiveModalTab('details')}
+                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold hover:bg-slate-200 transition-colors cursor-pointer"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>← Back to Details</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
+              </form>
+            </div>
 
-                {galleryUploadError && (
-                  <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 shrink-0" />
-                    <span>{galleryUploadError}</span>
-                  </div>
-                )}
-
-                {/* Optional Direct URL Addition */}
-                {showUrlAdd && (
-                  <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-2">
-                    <p className="text-xs font-semibold text-slate-700">Add Snapshot via Direct URL</p>
-                    <div className="grid sm:grid-cols-2 gap-2">
-                      <input
-                        type="text"
-                        value={newGallerySrc}
-                        onChange={(e) => setNewGallerySrc(e.target.value)}
-                        placeholder="Image URL or /events/photo.jpeg"
-                        className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-[#0c2461]"
-                      />
-                      <input
-                        type="text"
-                        value={newGalleryAlt}
-                        onChange={(e) => setNewGalleryAlt(e.target.value)}
-                        placeholder="Short caption / alt text"
-                        className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-[#0c2461]"
-                      />
-                    </div>
-                    <div className="flex justify-end">
-                      <button
-                        type="button"
-                        onClick={handleAddGalleryItem}
-                        disabled={!newGallerySrc.trim()}
-                        className="px-3 py-1.5 rounded-lg bg-[#0c2461] hover:bg-[#091b48] text-white text-xs font-semibold disabled:opacity-50 transition-colors cursor-pointer"
-                      >
-                        + Add URL to Gallery
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Existing Snapshots List with In-Line Caption Editing */}
-                {formData.gallery.length > 0 && (
-                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                      Current Snapshots ({formData.gallery.length})
-                    </p>
-                    {formData.gallery.map((snap, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center gap-3 bg-white p-2.5 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors"
-                      >
-                        <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-slate-100 relative border border-slate-200">
-                          <img
-                            src={snap.src}
-                            alt={snap.alt}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0 space-y-1">
-                          <input
-                            type="text"
-                            value={snap.alt}
-                            onChange={(e) => handleUpdateGalleryCaption(idx, e.target.value)}
-                            placeholder="Snapshot caption..."
-                            className="w-full text-xs font-medium text-slate-800 px-2 py-1 rounded-md border border-slate-200 focus:outline-none focus:ring-1 focus:ring-[#0c2461]"
-                          />
-                          <p className="text-[10px] text-slate-400 truncate px-0.5">{snap.src}</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveGalleryItem(idx)}
-                          className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                          title="Remove snapshot"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+            {/* Modal Footer (Fixed at bottom) */}
+            <div className="px-5 sm:px-7 py-3.5 border-t border-slate-100 bg-white shrink-0 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <span className="font-medium text-slate-700">
+                  {formData.gallery.length} snapshot{formData.gallery.length === 1 ? '' : 's'} attached
+                </span>
+                <span className="hidden sm:inline">•</span>
+                <span className="text-slate-400 hidden sm:inline">
+                  {formData.status === 'upcoming' ? 'Upcoming event' : 'Archive with gallery'}
+                </span>
               </div>
 
-              {/* Form Actions */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+              <div className="flex items-center gap-2.5">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
@@ -859,12 +1021,14 @@ export default function EventsManagementPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-[#0c2461] hover:bg-[#091b48] text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+                  form="event-form"
+                  className="px-5 py-2 rounded-xl bg-[#0c2461] hover:bg-[#091b48] text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer flex items-center gap-1.5"
                 >
-                  {editingEvent ? 'Save Changes' : 'Create Event'}
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>{editingEvent ? 'Save Changes' : 'Create Event'}</span>
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
