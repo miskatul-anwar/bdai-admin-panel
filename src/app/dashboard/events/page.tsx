@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Image from 'next/image';
 import {
   Calendar,
@@ -15,10 +15,14 @@ import {
   X,
   AlertTriangle,
   UploadCloud,
+  Loader2,
+  Link as LinkIcon,
+  CheckCircle2,
 } from 'lucide-react';
 import { useAdmin } from '@/lib/store';
 import { EventItem, EventGalleryItem } from '@/types';
 import ImageUpload from '@/components/ui/ImageUpload';
+import { uploadImage } from '@/lib/api';
 
 const CATEGORY_SUGGESTIONS = [
   'Workshop',
@@ -56,6 +60,14 @@ export default function EventsManagementPage() {
   // Gallery item being added inside modal
   const [newGallerySrc, setNewGallerySrc] = useState('');
   const [newGalleryAlt, setNewGalleryAlt] = useState('');
+
+  // Gallery direct upload & drag-drop state
+  const [isUploadingGallery, setIsUploadingGallery] = useState(false);
+  const [uploadProgressText, setUploadProgressText] = useState('');
+  const [galleryUploadError, setGalleryUploadError] = useState<string | null>(null);
+  const [showUrlAdd, setShowUrlAdd] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const galleryFileInputRef = useRef<HTMLInputElement>(null);
 
   // Delete Confirmation Modal State
   const [deleteTarget, setDeleteTarget] = useState<EventItem | null>(null);
@@ -96,6 +108,8 @@ export default function EventsManagementPage() {
     });
     setNewGallerySrc('');
     setNewGalleryAlt('');
+    setGalleryUploadError(null);
+    setShowUrlAdd(false);
     setIsModalOpen(true);
   };
 
@@ -115,10 +129,68 @@ export default function EventsManagementPage() {
     });
     setNewGallerySrc('');
     setNewGalleryAlt('');
+    setGalleryUploadError(null);
+    setShowUrlAdd(false);
     setIsModalOpen(true);
   };
 
-  // Add snapshot to modal form
+  // Batch upload image files directly to Cloudinary CDN
+  const handleUploadGalleryFiles = async (files: FileList | File[]) => {
+    const fileArray = Array.from(files).filter((f) => f.type.startsWith('image/'));
+    if (fileArray.length === 0) {
+      setGalleryUploadError('Please select valid image files (JPG, PNG, WebP).');
+      return;
+    }
+
+    setIsUploadingGallery(true);
+    setGalleryUploadError(null);
+
+    const newItems: EventGalleryItem[] = [];
+
+    for (let i = 0; i < fileArray.length; i++) {
+      const file = fileArray[i];
+      setUploadProgressText(`Uploading ${i + 1} of ${fileArray.length} (${file.name})...`);
+      try {
+        const url = await uploadImage(file, 'bdai/events');
+        const cleanCaption = file.name
+          .replace(/\.[^/.]+$/, '')
+          .replace(/[-_]/g, ' ')
+          .trim();
+        newItems.push({
+          src: url,
+          alt: cleanCaption || formData.title || 'Event snapshot',
+        });
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Upload failed';
+        setGalleryUploadError(`Failed to upload ${file.name}: ${msg}`);
+      }
+    }
+
+    if (newItems.length > 0) {
+      setFormData((prev) => ({
+        ...prev,
+        gallery: [...prev.gallery, ...newItems],
+      }));
+    }
+
+    setIsUploadingGallery(false);
+    setUploadProgressText('');
+    if (galleryFileInputRef.current) {
+      galleryFileInputRef.current.value = '';
+    }
+  };
+
+  // Update caption for existing gallery item in-place
+  const handleUpdateGalleryCaption = (index: number, newCaption: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      gallery: prev.gallery.map((item, i) =>
+        i === index ? { ...item, alt: newCaption } : item
+      ),
+    }));
+  };
+
+  // Add snapshot to modal form via direct URL
   const handleAddGalleryItem = () => {
     if (!newGallerySrc.trim()) return;
     const item: EventGalleryItem = {
@@ -543,31 +615,140 @@ export default function EventsManagementPage() {
                       Gallery Snapshots ({formData.gallery.length})
                     </span>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowUrlAdd(!showUrlAdd)}
+                    className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
+                  >
+                    <LinkIcon className="w-3 h-3" />
+                    <span>{showUrlAdd ? 'Hide URL input' : 'Add via Image URL'}</span>
+                  </button>
                 </div>
 
-                {/* Existing Snapshots List */}
+                {/* Direct Upload Drag & Drop Area */}
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDragging(true);
+                  }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragging(false);
+                    if (e.dataTransfer.files) handleUploadGalleryFiles(e.dataTransfer.files);
+                  }}
+                  onClick={() => galleryFileInputRef.current?.click()}
+                  className={`cursor-pointer border-2 border-dashed rounded-2xl p-5 text-center transition-all ${
+                    isDragging
+                      ? 'border-blue-500 bg-blue-50/50 scale-[0.99]'
+                      : 'border-slate-300 hover:border-[#0c2461] hover:bg-slate-100/70 bg-white'
+                  } ${isUploadingGallery ? 'pointer-events-none opacity-80' : ''}`}
+                >
+                  <input
+                    ref={galleryFileInputRef}
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={(e) => e.target.files && handleUploadGalleryFiles(e.target.files)}
+                    className="hidden"
+                  />
+                  {isUploadingGallery ? (
+                    <div className="flex flex-col items-center justify-center py-2 text-[#0c2461]">
+                      <Loader2 className="w-6 h-6 animate-spin text-blue-600 mb-2" />
+                      <p className="text-xs font-semibold text-slate-800">
+                        {uploadProgressText || 'Uploading photos to Cloudinary CDN...'}
+                      </p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        Please wait while photos are optimized and uploaded
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-2">
+                        <UploadCloud className="w-5 h-5" />
+                      </div>
+                      <p className="text-xs font-bold text-slate-800">
+                        Click to upload or drag & drop event photos
+                      </p>
+                      <p className="text-[10px] text-slate-500 mt-1">
+                        PNG, JPG, WebP up to 10MB each • Select multiple photos at once
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {galleryUploadError && (
+                  <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    <span>{galleryUploadError}</span>
+                  </div>
+                )}
+
+                {/* Optional Direct URL Addition */}
+                {showUrlAdd && (
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-2">
+                    <p className="text-xs font-semibold text-slate-700">Add Snapshot via Direct URL</p>
+                    <div className="grid sm:grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        value={newGallerySrc}
+                        onChange={(e) => setNewGallerySrc(e.target.value)}
+                        placeholder="Image URL or /events/photo.jpeg"
+                        className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-[#0c2461]"
+                      />
+                      <input
+                        type="text"
+                        value={newGalleryAlt}
+                        onChange={(e) => setNewGalleryAlt(e.target.value)}
+                        placeholder="Short caption / alt text"
+                        className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-[#0c2461]"
+                      />
+                    </div>
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={handleAddGalleryItem}
+                        disabled={!newGallerySrc.trim()}
+                        className="px-3 py-1.5 rounded-lg bg-[#0c2461] hover:bg-[#091b48] text-white text-xs font-semibold disabled:opacity-50 transition-colors cursor-pointer"
+                      >
+                        + Add URL to Gallery
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Existing Snapshots List with In-Line Caption Editing */}
                 {formData.gallery.length > 0 && (
-                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                      Current Snapshots ({formData.gallery.length})
+                    </p>
                     {formData.gallery.map((snap, idx) => (
                       <div
                         key={idx}
-                        className="flex items-center gap-3 bg-white p-2 rounded-xl border border-slate-200"
+                        className="flex items-center gap-3 bg-white p-2.5 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors"
                       >
-                        <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-slate-100 relative">
+                        <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-slate-100 relative border border-slate-200">
                           <img
                             src={snap.src}
                             alt={snap.alt}
                             className="w-full h-full object-cover"
                           />
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-slate-800 truncate">{snap.alt || 'No caption'}</p>
-                          <p className="text-[10px] text-slate-400 truncate">{snap.src}</p>
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <input
+                            type="text"
+                            value={snap.alt}
+                            onChange={(e) => handleUpdateGalleryCaption(idx, e.target.value)}
+                            placeholder="Snapshot caption..."
+                            className="w-full text-xs font-medium text-slate-800 px-2 py-1 rounded-md border border-slate-200 focus:outline-none focus:ring-1 focus:ring-[#0c2461]"
+                          />
+                          <p className="text-[10px] text-slate-400 truncate px-0.5">{snap.src}</p>
                         </div>
                         <button
                           type="button"
                           onClick={() => handleRemoveGalleryItem(idx)}
-                          className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors"
+                          className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                           title="Remove snapshot"
                         >
                           <X className="w-4 h-4" />
@@ -576,37 +757,6 @@ export default function EventsManagementPage() {
                     ))}
                   </div>
                 )}
-
-                {/* Add Snapshot Row */}
-                <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-2">
-                  <p className="text-xs font-semibold text-slate-700">Add Snapshot to Gallery</p>
-                  <div className="grid sm:grid-cols-2 gap-2">
-                    <input
-                      type="text"
-                      value={newGallerySrc}
-                      onChange={(e) => setNewGallerySrc(e.target.value)}
-                      placeholder="Image URL or /events/photo.jpeg"
-                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-[#0c2461]"
-                    />
-                    <input
-                      type="text"
-                      value={newGalleryAlt}
-                      onChange={(e) => setNewGalleryAlt(e.target.value)}
-                      placeholder="Short description / caption"
-                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-[#0c2461]"
-                    />
-                  </div>
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      onClick={handleAddGalleryItem}
-                      disabled={!newGallerySrc.trim()}
-                      className="px-3 py-1.5 rounded-lg bg-[#0c2461] hover:bg-[#091b48] text-white text-xs font-semibold disabled:opacity-50 transition-colors cursor-pointer"
-                    >
-                      + Add to Gallery
-                    </button>
-                  </div>
-                </div>
               </div>
 
               {/* Form Actions */}

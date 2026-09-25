@@ -268,5 +268,37 @@ export const api = {
     apiRequest<any>(`/events/${id}`, {
       method: 'DELETE',
     }),
+
+  // Upload image to Cloudinary CDN
+  uploadImage: (file: File, folder = 'bdai') => uploadImage(file, folder),
 };
+
+export async function uploadImage(file: File, folder = 'bdai'): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('folder', folder);
+
+  const token =
+    (typeof window !== 'undefined' ? localStorage.getItem('bdai_auth_token') : null) ||
+    getCookie('bdai_access_token') ||
+    getCookie('access_token');
+  const headers: Record<string, string> = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(`${API_BASE_URL}/upload`, {
+    method: 'POST',
+    headers,
+    credentials: 'include',
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    const msg = errData.error || errData.message || `Upload failed (Status ${res.status})`;
+    throw new Error(msg);
+  }
+
+  const data = await res.json();
+  return data.secure_url || data.url;
+}
 
