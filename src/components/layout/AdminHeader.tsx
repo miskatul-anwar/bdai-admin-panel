@@ -12,7 +12,8 @@ interface AdminHeaderProps {
 const ROUTE_TITLES: Record<string, { title: string; section: string }> = {
   '/dashboard': { title: 'Overview', section: 'Dashboard' },
   '/dashboard/team': { title: 'Team Directory', section: 'Portal Content' },
-  '/dashboard/news': { title: 'News & Events', section: 'Portal Content' },
+  '/dashboard/news': { title: 'News & Articles', section: 'Portal Content' },
+  '/dashboard/events': { title: 'Events (Held & Upcoming)', section: 'Portal Content' },
   '/dashboard/objectives': { title: 'Research Objectives', section: 'Portal Content' },
   '/dashboard/tools': { title: 'Tools & Platforms', section: 'Portal Content' },
   '/dashboard/videos': { title: 'Featured Videos', section: 'Portal Content' },

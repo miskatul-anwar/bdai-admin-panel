@@ -11,6 +11,7 @@ import {
   ActivityLog,
   Tool,
   AdminVideo,
+  EventItem,
 } from '@/types';
 import {
   DEMO_ADMIN_USER,
@@ -22,6 +23,7 @@ import {
   INITIAL_ACTIVITIES,
   INITIAL_TOOLS,
   INITIAL_VIDEOS,
+  INITIAL_EVENTS,
 } from './demo-data';
 import {
   dbGetTeam,
@@ -56,6 +58,10 @@ import {
   dbAddVideo,
   dbUpdateVideo,
   dbDeleteVideo,
+  dbGetEvents,
+  dbAddEvent,
+  dbUpdateEvent,
+  dbDeleteEvent,
 } from './supabase-db';
 import { setCookie, deleteCookie } from './cookies';
 import { api } from './api';
@@ -129,6 +135,12 @@ interface AdminContextType {
   updateVideo: (id: string, item: Partial<AdminVideo>) => Promise<void>;
   deleteVideo: (id: string) => Promise<void>;
 
+  // Events (Held & Upcoming) CRUD
+  events: EventItem[];
+  addEvent: (item: Omit<EventItem, 'id'>) => Promise<void>;
+  updateEvent: (id: string, item: Partial<EventItem>) => Promise<void>;
+  deleteEvent: (id: string) => Promise<void>;
+
   activities: ActivityLog[];
   resetToDemoData: () => void;
 
@@ -155,11 +167,29 @@ const STORAGE_KEYS = {
   OBJECTIVES: 'bdai_admin_objectives',
   TOOLS: 'bdai_admin_tools',
   VIDEOS: 'bdai_admin_videos',
+  EVENTS: 'bdai_admin_events',
   ACTIVITIES: 'bdai_admin_activities',
   SETTINGS: 'bdai_admin_site_settings',
   ADMIN_PROVISIONING: 'bdai_admin_provisioning_policy',
   CACHE_TIMESTAMP: 'bdai_admin_cache_timestamp',
 };
+
+function normalizeEvent(e: any): EventItem {
+  return {
+    id: e.id,
+    title: e.title,
+    date: e.date,
+    status: e.status || 'held',
+    category: e.category || 'Event',
+    location: e.location || '',
+    description: e.description || '',
+    banner: e.banner || '',
+    gallery: Array.isArray(e.gallery) ? e.gallery : [],
+    order: e.order ?? 0,
+    createdAt: e.createdAt || e.created_at,
+    updatedAt: e.updatedAt || e.updated_at,
+  };
+}
 
 function normalizeVideo(v: any): AdminVideo {
   return {
@@ -312,6 +342,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
   const [objectives, setObjectives] = useState<ResearchObjective[]>(INITIAL_OBJECTIVES);
   const [tools, setTools] = useState<Tool[]>(INITIAL_TOOLS);
   const [videos, setVideos] = useState<AdminVideo[]>(INITIAL_VIDEOS);
+  const [events, setEvents] = useState<EventItem[]>(INITIAL_EVENTS);
   const [activities, setActivities] = useState<ActivityLog[]>(INITIAL_ACTIVITIES);
   const [settings, setSettings] = useState<Record<string, any>>({});
   const [adminOnlyProvisioning, setAdminOnlyProvisioning] = useState<boolean>(true);
@@ -370,6 +401,9 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
 
       const storedVideos = localStorage.getItem(STORAGE_KEYS.VIDEOS);
       if (storedVideos) setVideos(JSON.parse(storedVideos));
+
+      const storedEvents = localStorage.getItem(STORAGE_KEYS.EVENTS);
+      if (storedEvents) setEvents(JSON.parse(storedEvents));
 
       const storedActivities = localStorage.getItem(STORAGE_KEYS.ACTIVITIES);
       if (storedActivities) setActivities(JSON.parse(storedActivities));
@@ -434,7 +468,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      const [teamRes, newsRes, vacRes, objRes, usersRes, actRes, settingsRes, toolsRes, videosRes] = await Promise.allSettled([
+      const [teamRes, newsRes, vacRes, objRes, usersRes, actRes, settingsRes, toolsRes, videosRes, eventsRes] = await Promise.allSettled([
         dbGetTeam(),
         dbGetNews(),
         dbGetVacancies(),
@@ -444,6 +478,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
         dbGetSettings(),
         dbGetTools(),
         dbGetVideos(),
+        dbGetEvents(),
       ]);
 
       let backendActive = false;
@@ -486,6 +521,13 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
         const normalized = videosRes.value.map(normalizeVideo);
         setVideos(normalized);
         localStorage.setItem(STORAGE_KEYS.VIDEOS, JSON.stringify(normalized));
+        backendActive = true;
+      }
+
+      if (eventsRes.status === 'fulfilled' && Array.isArray(eventsRes.value) && eventsRes.value.length > 0) {
+        const normalized = eventsRes.value.map(normalizeEvent);
+        setEvents(normalized);
+        localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(normalized));
         backendActive = true;
       }
 
@@ -1173,6 +1215,95 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     recordActivity('Deleted Video', 'Video', target?.title || id);
   };
 
+  // Events (Held & Upcoming) CRUD
+  const addEvent = async (eventData: Omit<EventItem, 'id'>) => {
+    if (!canEdit) {
+      showToast('Only Admins and Moderators can add events', 'error');
+      return;
+    }
+    const newId = 'event_' + Date.now();
+    const optimisticEvent: EventItem = {
+      ...eventData,
+      id: newId,
+      order: eventData.order ?? events.length + 1,
+      gallery: eventData.gallery || [],
+    };
+    setEvents((prev) => [...prev, optimisticEvent].sort((a, b) => a.order - b.order));
+
+    try {
+      await dbAddEvent(
+        {
+          id: newId,
+          title: eventData.title,
+          date: eventData.date,
+          status: eventData.status,
+          category: eventData.category,
+          location: eventData.location,
+          description: eventData.description,
+          banner: eventData.banner,
+          gallery: eventData.gallery,
+          order: optimisticEvent.order,
+        },
+        user?.name || 'Admin'
+      );
+      showToast(`Added event "${eventData.title}" (synced to database)`, 'success');
+    } catch {
+      showToast(`Added event "${eventData.title}" (cached locally)`, 'info');
+    }
+    recordActivity('Added Event', 'Event', eventData.title);
+  };
+
+  const updateEvent = async (id: string, eventData: Partial<EventItem>) => {
+    if (!canEdit) {
+      showToast('Only Admins and Moderators can edit events', 'error');
+      return;
+    }
+    setEvents((prev) =>
+      prev
+        .map((e) => (e.id === id ? { ...e, ...eventData } : e))
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    );
+
+    try {
+      await dbUpdateEvent(
+        id,
+        {
+          title: eventData.title,
+          date: eventData.date,
+          status: eventData.status,
+          category: eventData.category,
+          location: eventData.location,
+          description: eventData.description,
+          banner: eventData.banner,
+          gallery: eventData.gallery,
+          order: eventData.order,
+        },
+        user?.name || 'Admin'
+      );
+      showToast(`Updated event "${eventData.title || id}" (synced to database)`, 'success');
+    } catch {
+      showToast(`Updated event "${eventData.title || id}" (cached locally)`, 'info');
+    }
+    recordActivity('Updated Event', 'Event', eventData.title || id);
+  };
+
+  const deleteEvent = async (id: string) => {
+    if (!canDelete) {
+      showToast('Only Admins can delete events', 'error');
+      return;
+    }
+    const target = events.find((e) => e.id === id);
+    setEvents((prev) => prev.filter((e) => e.id !== id));
+
+    try {
+      await dbDeleteEvent(id, user?.name || 'Admin');
+      showToast(`Event "${target?.title || id}" deleted from database`, 'info');
+    } catch {
+      showToast(`Event "${target?.title || id}" deleted locally`, 'info');
+    }
+    recordActivity('Deleted Event', 'Event', target?.title || id);
+  };
+
   const updateSiteSetting = async (id: string, data: any) => {
     try {
       await dbUpdateSetting(id, data, user?.name || 'Admin');
@@ -1200,6 +1331,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setObjectives(INITIAL_OBJECTIVES);
     setTools(INITIAL_TOOLS);
     setVideos(INITIAL_VIDEOS);
+    setEvents(INITIAL_EVENTS);
     setActivities(INITIAL_ACTIVITIES);
     setAdminOnlyProvisioning(true);
 
@@ -1211,6 +1343,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem(STORAGE_KEYS.OBJECTIVES, JSON.stringify(INITIAL_OBJECTIVES));
     localStorage.setItem(STORAGE_KEYS.TOOLS, JSON.stringify(INITIAL_TOOLS));
     localStorage.setItem(STORAGE_KEYS.VIDEOS, JSON.stringify(INITIAL_VIDEOS));
+    localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(INITIAL_EVENTS));
     localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(INITIAL_ACTIVITIES));
     localStorage.setItem(STORAGE_KEYS.ADMIN_PROVISIONING, JSON.stringify(true));
 
@@ -1273,6 +1406,11 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
         addVideo,
         updateVideo,
         deleteVideo,
+
+        events,
+        addEvent,
+        updateEvent,
+        deleteEvent,
 
         activities,
         resetToDemoData,

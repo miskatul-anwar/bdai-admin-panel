@@ -247,4 +247,26 @@ export const api = {
     apiRequest<any>(`/videos/${id}`, {
       method: 'DELETE',
     }),
+
+  // Events (Held & Upcoming)
+  getEvents: (params?: { status?: string }) => {
+    const qs = params?.status ? `?status=${encodeURIComponent(params.status)}` : '';
+    return apiRequest<any[]>(`/events${qs}`);
+  },
+  getEvent: (id: string) => apiRequest<any>(`/events/${id}`),
+  createEvent: (eventData: any) =>
+    apiRequest<any>('/events', {
+      method: 'POST',
+      body: JSON.stringify(eventData),
+    }),
+  updateEvent: (id: string, eventData: any) =>
+    apiRequest<any>(`/events/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(eventData),
+    }),
+  deleteEvent: (id: string) =>
+    apiRequest<any>(`/events/${id}`, {
+      method: 'DELETE',
+    }),
 };
+

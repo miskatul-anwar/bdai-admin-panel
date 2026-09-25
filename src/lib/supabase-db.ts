@@ -560,3 +560,66 @@ export async function dbDeleteVideo(id: string, userName: string = 'Admin'): Pro
   return updated;
 }
 
+// ==========================================
+// Events (Held & Upcoming) Showcase
+// ==========================================
+
+export interface DbEventGalleryItem {
+  src: string;
+  alt: string;
+}
+
+export interface DbEvent {
+  id: string;
+  title: string;
+  date: string;
+  status: 'held' | 'upcoming';
+  category?: string;
+  location?: string;
+  description?: string;
+  banner: string;
+  gallery?: DbEventGalleryItem[];
+  order?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export async function dbGetEvents(): Promise<DbEvent[]> {
+  const { data, error } = await supabase
+    .from('site_settings')
+    .select('data')
+    .eq('id', 'events')
+    .maybeSingle();
+
+  if (error || !data) return [];
+  const list = Array.isArray(data.data) ? data.data : [];
+  list.sort((a: DbEvent, b: DbEvent) => (a.order ?? 0) - (b.order ?? 0));
+  return list;
+}
+
+export async function dbAddEvent(event: DbEvent, userName: string = 'Admin'): Promise<DbEvent[]> {
+  const current = await dbGetEvents();
+  const updated = [...current, event];
+  await dbUpdateSetting('events', updated, userName);
+  await dbLogActivity('Added Event', 'Event', event.title, userName);
+  return updated;
+}
+
+export async function dbUpdateEvent(id: string, eventData: Partial<DbEvent>, userName: string = 'Admin'): Promise<DbEvent[]> {
+  const current = await dbGetEvents();
+  const updated = current.map((e) => (e.id === id ? { ...e, ...eventData, updated_at: new Date().toISOString() } : e));
+  await dbUpdateSetting('events', updated, userName);
+  await dbLogActivity('Updated Event', 'Event', eventData.title || id, userName);
+  return updated;
+}
+
+export async function dbDeleteEvent(id: string, userName: string = 'Admin'): Promise<DbEvent[]> {
+  const current = await dbGetEvents();
+  const eventToDelete = current.find((e) => e.id === id);
+  const updated = current.filter((e) => e.id !== id);
+  await dbUpdateSetting('events', updated, userName);
+  await dbLogActivity('Deleted Event', 'Event', eventToDelete?.title || id, userName);
+  return updated;
+}
+
+

@@ -115,3 +115,26 @@ export interface AdminVideo {
   createdAt?: string;
   updatedAt?: string;
 }
+
+export interface EventGalleryItem {
+  src: string;
+  alt: string;
+}
+
+export type EventStatus = 'held' | 'upcoming';
+
+export interface EventItem {
+  id: string;
+  title: string;
+  date: string;
+  status: EventStatus;
+  category: string;
+  location?: string;
+  description?: string;
+  banner: string;
+  gallery: EventGalleryItem[];
+  order: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+

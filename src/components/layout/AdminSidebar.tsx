@@ -18,6 +18,7 @@ import {
   Handshake,
   Wrench,
   PlayCircle,
+  Calendar,
   X,
 } from 'lucide-react';
 import { useAdmin } from '@/lib/store';
@@ -33,7 +34,8 @@ const NAVIGATION_GROUPS = [
     title: 'Portal Content',
     items: [
       { name: 'Team', href: '/dashboard/team', icon: Users },
-      { name: 'News & Events', href: '/dashboard/news', icon: Newspaper },
+      { name: 'News & Articles', href: '/dashboard/news', icon: Newspaper },
+      { name: 'Events (Held & Upcoming)', href: '/dashboard/events', icon: Calendar },
       { name: 'Objectives', href: '/dashboard/objectives', icon: Target },
       { name: 'Tools & Platforms', href: '/dashboard/tools', icon: Wrench },
       { name: 'Featured Videos', href: '/dashboard/videos', icon: PlayCircle },
