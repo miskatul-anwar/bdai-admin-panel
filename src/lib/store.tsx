@@ -1251,19 +1251,6 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
         },
         user?.name || 'Admin'
       );
-      api.createEvent({
-        id: newId,
-        title: eventData.title,
-        date: eventData.date,
-        status: eventData.status,
-        category: eventData.category,
-        location: eventData.location,
-        description: eventData.description,
-        banner: eventData.banner,
-        gallery: eventData.gallery,
-        order: optimisticEvent.order,
-      }).catch(() => {});
-
       showToast(`Added event "${eventData.title}" (synced to database)`, 'success');
     } catch {
       showToast(`Added event "${eventData.title}" (cached locally)`, 'info');
@@ -1301,7 +1288,6 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
         },
         user?.name || 'Admin'
       );
-      api.updateEvent(id, eventData).catch(() => {});
       showToast(`Updated event "${eventData.title || id}" (synced to database)`, 'success');
     } catch {
       showToast(`Updated event "${eventData.title || id}" (cached locally)`, 'info');
@@ -1325,7 +1311,6 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       await dbDeleteEvent(targetId, user?.name || 'Admin');
-      api.deleteEvent(targetId).catch(() => {});
       showToast(`Event "${target?.title || id}" deleted from database`, 'info');
     } catch {
       showToast(`Event "${target?.title || id}" deleted locally`, 'info');
