@@ -582,6 +582,7 @@ export interface DbEvent {
   banner: string;
   gallery?: DbEventGalleryItem[];
   order?: number;
+  is_visible?: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -601,7 +602,11 @@ export async function dbGetEvents(): Promise<DbEvent[]> {
 
 export async function dbAddEvent(event: DbEvent, userName: string = 'Admin'): Promise<DbEvent[]> {
   const current = await dbGetEvents();
-  const updated = [event, ...current.filter((e) => e.id !== event.id)];
+  const eventToSave: DbEvent = {
+    ...event,
+    is_visible: event.is_visible !== undefined ? event.is_visible : true,
+  };
+  const updated = [eventToSave, ...current.filter((e) => e.id !== event.id)];
   updated.sort((a, b) => getEventTimestamp(b) - getEventTimestamp(a));
   updated.forEach((e, idx) => {
     e.order = idx + 1;

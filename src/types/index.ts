@@ -135,6 +135,7 @@ export interface EventItem {
   banner: string;
   gallery: EventGalleryItem[];
   order: number;
+  is_visible?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

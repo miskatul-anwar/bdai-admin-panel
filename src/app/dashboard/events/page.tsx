@@ -20,6 +20,8 @@ import {
   CheckCircle2,
   Columns,
   FileText,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { useAdmin } from '@/lib/store';
 import { EventItem, EventGalleryItem } from '@/types';
@@ -58,7 +60,23 @@ export default function EventsManagementPage() {
     banner: '/events/workshop_banner.jpeg',
     gallery: [],
     order: 1,
+    is_visible: true,
   });
+
+  // Toggling visibility state
+  const [togglingVisibilityId, setTogglingVisibilityId] = useState<string | null>(null);
+
+  const handleToggleVisibility = async (event: EventItem) => {
+    if (!canEdit) return;
+    const currentVisible = event.is_visible !== false;
+    const nextVisible = !currentVisible;
+    setTogglingVisibilityId(event.id);
+    try {
+      await updateEvent(event.id, { is_visible: nextVisible });
+    } finally {
+      setTogglingVisibilityId(null);
+    }
+  };
 
   // Gallery item being added inside modal
   const [newGallerySrc, setNewGallerySrc] = useState('');
@@ -137,6 +155,7 @@ export default function EventsManagementPage() {
       banner: '/events/workshop_banner.jpeg',
       gallery: [],
       order: 1,
+      is_visible: true,
     });
     setNewGallerySrc('');
     setNewGalleryAlt('');
@@ -165,6 +184,7 @@ export default function EventsManagementPage() {
       banner: event.banner || '',
       gallery: event.gallery ? [...event.gallery] : [],
       order: event.order ?? 1,
+      is_visible: event.is_visible !== false,
     });
     setNewGallerySrc('');
     setNewGalleryAlt('');
@@ -410,7 +430,7 @@ export default function EventsManagementPage() {
                       <span className="text-xs">No banner image</span>
                     </div>
                   )}
-                  <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                  <div className="absolute top-3 left-3 flex flex-wrap items-center gap-1.5">
                     <span
                       className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md shadow-xs ${
                         isHeld
@@ -420,6 +440,11 @@ export default function EventsManagementPage() {
                     >
                       {isHeld ? 'Held Event' : 'Upcoming Event'}
                     </span>
+                    {event.is_visible === false && (
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-amber-500 text-white shadow-xs flex items-center gap-1">
+                        <EyeOff className="w-3 h-3" /> Hidden from Site
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -487,7 +512,34 @@ export default function EventsManagementPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-slate-100">
+                  <div className="flex flex-wrap items-center justify-end gap-2 mt-6 pt-4 border-t border-slate-100">
+                    {canEdit && (
+                      <button
+                        onClick={() => handleToggleVisibility(event)}
+                        disabled={togglingVisibilityId === event.id}
+                        title={
+                          event.is_visible !== false
+                            ? 'Currently visible on public website. Click to make invisible.'
+                            : 'Currently hidden from public website. Click to make visible.'
+                        }
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                          event.is_visible !== false
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                            : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                        }`}
+                      >
+                        {togglingVisibilityId === event.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : event.is_visible !== false ? (
+                          <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                        ) : (
+                          <EyeOff className="w-3.5 h-3.5 text-amber-600" />
+                        )}
+                        <span>
+                          {event.is_visible !== false ? 'Visible on Site' : 'Hidden from Site'}
+                        </span>
+                      </button>
+                    )}
                     {canEdit && (
                       <button
                         onClick={() => handleOpenEdit(event)}
@@ -724,6 +776,58 @@ export default function EventsManagementPage() {
                             </p>
                           )}
                         </div>
+                      </div>
+
+                      {/* Frontend Visibility Setting */}
+                      <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white border border-slate-200 shadow-xs">
+                        <div className="flex items-center gap-2.5">
+                          {formData.is_visible !== false ? (
+                            <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+                              <Eye className="w-4 h-4" />
+                            </div>
+                          ) : (
+                            <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 shrink-0">
+                              <EyeOff className="w-4 h-4" />
+                            </div>
+                          )}
+                          <div>
+                            <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                              Website Visibility:
+                              <span
+                                className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                                  formData.is_visible !== false
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                    : 'bg-amber-50 text-amber-700 border border-amber-200'
+                                }`}
+                              >
+                                {formData.is_visible !== false ? 'Visible on Website' : 'Hidden from Website'}
+                              </span>
+                            </p>
+                            <p className="text-[11px] text-slate-500 mt-0.5">
+                              {formData.is_visible !== false
+                                ? 'This event will be publicly visible in the events showcase.'
+                                : 'This event will be hidden from the public website.'}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              is_visible: !(prev.is_visible !== false),
+                            }))
+                          }
+                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                            formData.is_visible !== false ? 'bg-emerald-600' : 'bg-slate-300'
+                          }`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                              formData.is_visible !== false ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
                       </div>
 
                       {/* Category & Location */}

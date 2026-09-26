@@ -188,6 +188,7 @@ function normalizeEvent(e: any): EventItem {
     banner: e.banner || '',
     gallery: Array.isArray(e.gallery) ? e.gallery : [],
     order: e.order ?? 0,
+    is_visible: e.is_visible !== undefined ? Boolean(e.is_visible) : true,
     createdAt: e.createdAt || e.created_at,
     updatedAt: e.updatedAt || e.updated_at,
   };
@@ -1239,6 +1240,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
       ...eventData,
       id: newId,
       order: 1,
+      is_visible: eventData.is_visible !== undefined ? eventData.is_visible : true,
       gallery: eventData.gallery || [],
     };
     const nextEvents = [optimisticEvent, ...events.filter((e) => e.id !== newId)]
@@ -1264,6 +1266,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
           banner: eventData.banner,
           gallery: eventData.gallery,
           order: 1,
+          is_visible: eventData.is_visible !== undefined ? eventData.is_visible : true,
         },
         user?.name || 'Admin'
       );
@@ -1302,6 +1305,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
           description: eventData.description,
           banner: eventData.banner,
           gallery: eventData.gallery,
+          is_visible: eventData.is_visible,
         },
         user?.name || 'Admin'
       );

@@ -15,6 +15,9 @@ import {
   Clock,
   Sparkles,
   AlertTriangle,
+  Eye,
+  EyeOff,
+  Loader2,
 } from 'lucide-react';
 
 const CATEGORIES: { label: string; value: NewsCategory | 'all' }[] = [
@@ -130,9 +133,17 @@ export default function NewsManagementPage() {
     }
   };
 
-  const toggleStatus = (article: NewsArticle) => {
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  const toggleStatus = async (article: NewsArticle) => {
+    if (!canEdit) return;
     const nextStatus = article.status === 'published' ? 'draft' : 'published';
-    updateNews(article.id, { status: nextStatus });
+    setTogglingId(article.id);
+    try {
+      await updateNews(article.id, { status: nextStatus });
+    } finally {
+      setTogglingId(null);
+    }
   };
 
   // Filtered
@@ -234,18 +245,26 @@ export default function NewsManagementPage() {
 
                   <button
                     onClick={() => toggleStatus(article)}
-                    className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border transition-all cursor-pointer ${
+                    disabled={!canEdit || togglingId === article.id}
+                    title={
                       isPublished
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        : 'bg-amber-50 text-amber-700 border-amber-200'
+                        ? 'Currently visible on public website. Click to make invisible (Draft).'
+                        : 'Currently hidden from public website. Click to make visible (Published).'
+                    }
+                    className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-full border transition-all cursor-pointer ${
+                      isPublished
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                        : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
                     }`}
                   >
-                    {isPublished ? (
-                      <CheckCircle2 className="w-3 h-3" />
+                    {togglingId === article.id ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : isPublished ? (
+                      <Eye className="w-3 h-3 text-emerald-600" />
                     ) : (
-                      <Clock className="w-3 h-3" />
+                      <EyeOff className="w-3 h-3 text-amber-600" />
                     )}
-                    <span>{isPublished ? 'Published' : 'Draft'}</span>
+                    <span>{isPublished ? 'Visible on Site' : 'Hidden from Site (Draft)'}</span>
                   </button>
 
                   {article.featured && (
@@ -282,7 +301,32 @@ export default function NewsManagementPage() {
               </div>
 
               {/* Actions */}
-              <div className="flex items-center gap-2 self-end lg:self-center shrink-0 border-t lg:border-t-0 pt-3 lg:pt-0 w-full lg:w-auto justify-end">
+              <div className="flex flex-wrap items-center gap-2 self-end lg:self-center shrink-0 border-t lg:border-t-0 pt-3 lg:pt-0 w-full lg:w-auto justify-end">
+                {canEdit && (
+                  <button
+                    onClick={() => toggleStatus(article)}
+                    disabled={togglingId === article.id}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                      isPublished
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                        : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                    }`}
+                    title={
+                      isPublished
+                        ? 'Currently visible on public website. Click to hide.'
+                        : 'Currently hidden from public website. Click to publish.'
+                    }
+                  >
+                    {togglingId === article.id ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : isPublished ? (
+                      <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                    ) : (
+                      <EyeOff className="w-3.5 h-3.5 text-amber-600" />
+                    )}
+                    <span>{isPublished ? 'Visible' : 'Hidden'}</span>
+                  </button>
+                )}
                 {canEdit && (
                   <button
                     onClick={() => handleOpenEdit(article)}
@@ -379,8 +423,8 @@ export default function NewsManagementPage() {
                 }
                 className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-[#0c2461]"
               >
-                <option value="published">Published</option>
-                <option value="draft">Draft</option>
+                <option value="published">Visible on Site (Published)</option>
+                <option value="draft">Hidden from Site (Draft)</option>
               </select>
             </div>
           </div>
