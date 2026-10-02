@@ -265,6 +265,7 @@ export const api = {
         status: objData.status || 'in-progress',
         progress: typeof objData.progress === 'number' ? objData.progress : 0,
         deliverables: typeof objData.deliverables === 'number' ? objData.deliverables : 0,
+        tasks: Array.isArray(objData.tasks) ? objData.tasks : [],
       }),
     }),
   updateObjective: (id: string, objData: any) =>
@@ -278,6 +279,7 @@ export const api = {
         status: objData.status,
         progress: typeof objData.progress === 'number' ? objData.progress : undefined,
         deliverables: typeof objData.deliverables === 'number' ? objData.deliverables : undefined,
+        tasks: Array.isArray(objData.tasks) ? objData.tasks : undefined,
       }),
     }),
   deleteObjective: (id: string) =>

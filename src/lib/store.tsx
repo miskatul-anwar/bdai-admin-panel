@@ -6,6 +6,8 @@ import {
   NewsArticle,
   Vacancy,
   ResearchObjective,
+  ObjectiveStatus,
+  ObjectiveTask,
   AdminUser,
   UserRole,
   ActivityLog,
@@ -85,6 +87,7 @@ interface AdminContextType {
   addObjective: (item: ResearchObjective) => Promise<void>;
   updateObjective: (id: string, item: Partial<ResearchObjective>) => Promise<void>;
   deleteObjective: (id: string) => Promise<void>;
+  toggleObjectiveTask: (objectiveId: string, taskId: string) => Promise<void>;
 
   // Showcase Tools CRUD
   tools: Tool[];
@@ -476,9 +479,20 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
         backendActive = true;
       }
 
+      let tasksMap: Record<string, any> = {};
+      if (settingsRes.status === 'fulfilled' && settingsRes.value && typeof settingsRes.value === 'object') {
+        if ((settingsRes.value as any).objective_tasks) {
+          tasksMap = (settingsRes.value as any).objective_tasks;
+        }
+      }
+
       if (objRes.status === 'fulfilled' && Array.isArray(objRes.value)) {
-        setObjectives(objRes.value as any);
-        localStorage.setItem(STORAGE_KEYS.OBJECTIVES, JSON.stringify(objRes.value));
+        const enriched = objRes.value.map((o: any) => ({
+          ...o,
+          tasks: Array.isArray(o.tasks) && o.tasks.length > 0 ? o.tasks : (tasksMap[o.id] || []),
+        }));
+        setObjectives(enriched);
+        localStorage.setItem(STORAGE_KEYS.OBJECTIVES, JSON.stringify(enriched));
         backendActive = true;
       }
 
@@ -953,8 +967,19 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       const res = await api.updateObjective(id, objData);
-      setObjectives((prev) => prev.map((o) => (o.id === id ? (res as ResearchObjective) : o)));
-      showToast(`Objective ${id} updated in database`, 'success');
+      setObjectives((prev) => prev.map((o) => (o.id === id ? { ...o, ...(res as any), tasks: objData.tasks !== undefined ? objData.tasks : ((res as any).tasks || o.tasks) } : o)));
+
+      // Dual-persist tasks map if tasks were updated
+      if (objData.tasks !== undefined) {
+        const allTasksMap: Record<string, any> = {};
+        objectives.forEach((o) => {
+          allTasksMap[o.id] = o.id === id ? objData.tasks : (o.tasks || []);
+        });
+        allTasksMap[id] = objData.tasks;
+        await api.updateSetting('objective_tasks', allTasksMap).catch(() => {});
+      }
+
+      showToast(`Objective ${id} updated`, 'success');
     } catch {
       showToast(`Objective ${id} updated locally`, 'info');
     }
@@ -970,12 +995,73 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       const res = await api.createObjective(objData);
-      setObjectives((prev) => prev.map((o) => (o.id === objData.id ? (res as ResearchObjective) : o)));
-      showToast(`Objective ${objData.id} created in database`, 'success');
+      setObjectives((prev) => prev.map((o) => (o.id === objData.id ? { ...o, ...(res as any), tasks: objData.tasks || (res as any).tasks || [] } : o)));
+
+      if (objData.tasks && objData.tasks.length > 0) {
+        const allTasksMap: Record<string, any> = {};
+        objectives.forEach((o) => {
+          allTasksMap[o.id] = o.id === objData.id ? objData.tasks : (o.tasks || []);
+        });
+        allTasksMap[objData.id] = objData.tasks;
+        await api.updateSetting('objective_tasks', allTasksMap).catch(() => {});
+      }
+
+      showToast(`Objective ${objData.id} created`, 'success');
     } catch {
       showToast(`Objective ${objData.id} created locally`, 'info');
     }
     recordActivity('Created Milestone', 'Objective', objData.id);
+  };
+
+  const toggleObjectiveTask = async (objectiveId: string, taskId: string) => {
+    if (!canEdit) {
+      showToast('Only Admins and Moderators can update tasks', 'error');
+      return;
+    }
+
+    const targetObj = objectives.find((o) => o.id === objectiveId);
+    if (!targetObj) return;
+
+    const currentTasks = targetObj.tasks || [];
+    const updatedTasks = currentTasks.map((t) =>
+      t.id === taskId ? { ...t, completed: !t.completed } : t
+    );
+
+    const completedCount = updatedTasks.filter((t) => t.completed).length;
+    const autoProgress = updatedTasks.length > 0 ? Math.round((completedCount / updatedTasks.length) * 100) : targetObj.progress;
+    const autoStatus: ObjectiveStatus = autoProgress === 100 ? 'completed' : 'in-progress';
+
+    setObjectives((prev) =>
+      prev.map((o) =>
+        o.id === objectiveId
+          ? { ...o, tasks: updatedTasks, progress: autoProgress, status: autoStatus }
+          : o
+      )
+    );
+
+    try {
+      await api.updateObjective(objectiveId, {
+        tasks: updatedTasks,
+        progress: autoProgress,
+        status: autoStatus,
+      });
+
+      const allTasksMap: Record<string, any> = {};
+      objectives.forEach((o) => {
+        allTasksMap[o.id] = o.id === objectiveId ? updatedTasks : (o.tasks || []);
+      });
+      allTasksMap[objectiveId] = updatedTasks;
+      await api.updateSetting('objective_tasks', allTasksMap).catch(() => {});
+
+      const changedTask = updatedTasks.find((t) => t.id === taskId);
+      showToast(
+        `Task "${changedTask?.title || taskId}" marked as ${changedTask?.completed ? 'Done' : 'Not Done'}`,
+        'success'
+      );
+    } catch {
+      showToast('Task updated locally', 'info');
+    }
+    recordActivity('Toggled Task', 'Objective', `${objectiveId}: ${taskId}`);
   };
 
   const deleteObjective = async (id: string) => {
@@ -1373,6 +1459,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
         addObjective,
         updateObjective,
         deleteObjective,
+        toggleObjectiveTask,
 
         tools,
         addTool,

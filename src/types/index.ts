@@ -50,6 +50,12 @@ export interface Vacancy {
 
 export type ObjectiveStatus = 'in-progress' | 'completed' | 'planned';
 
+export interface ObjectiveTask {
+  id: string;
+  title: string;
+  completed: boolean;
+}
+
 export interface ResearchObjective {
   id: string; // e.g. "OB1", "OB2"
   title: string;
@@ -59,6 +65,7 @@ export interface ResearchObjective {
   status: ObjectiveStatus;
   progress: number; // 0 - 100
   deliverables: number;
+  tasks?: ObjectiveTask[];
 }
 
 export type UserRole = 'Admin' | 'Moderator';
