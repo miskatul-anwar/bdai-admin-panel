@@ -24,6 +24,8 @@ import {
   CheckCircle2,
   Circle,
   ListTodo,
+  UploadCloud,
+  Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -49,14 +51,7 @@ const DEFAULT_WORK_PACKAGES: WorkPackageItem[] = [
       { id: 'T1.5', label: 'Install furnishings and ergonomic workspace equipment.', completed: false },
       { id: 'T1.6', label: 'Set up backup, power protection (UPS), and IT maintenance procedures.', completed: false },
     ],
-    current_state_images: [
-      {
-        id: 'wp1-default-1',
-        url: '/bdai-lab-preview.png',
-        caption: 'High-Performance Research Computing & Lab Workstations deployed at BDAI Lab (CU CSE).',
-        date: 'September 2026',
-      },
-    ],
+    current_state_images: [],
   },
   {
     id: 'WP2',
@@ -179,17 +174,23 @@ export default function WorkPackagesManagementPage() {
 
         if (!found) return def;
 
-        const rawImages = found.current_state_images || found.state_images || found.images || [];
-        const stateImages: WorkPackageStateImage[] = Array.isArray(rawImages) && rawImages.length > 0
+        const hasExplicitImages = Array.isArray(found.current_state_images);
+        const rawImages = hasExplicitImages
+          ? found.current_state_images
+          : (Array.isArray(found.state_images)
+              ? found.state_images
+              : (Array.isArray(found.images) ? found.images : (def.current_state_images || [])));
+        const stateImages: WorkPackageStateImage[] = Array.isArray(rawImages)
           ? rawImages.map((img: any, imgIdx: number) => ({
               id: img.id || `img-${idx}-${imgIdx}-${Date.now()}`,
               url: img.url || img.src || '',
               caption: img.caption || '',
               date: img.date || '',
             }))
-          : (def.current_state_images || []);
+          : [];
 
-        const rawTasks = Array.isArray(found.tasks) && found.tasks.length > 0 ? found.tasks : (def.tasks || []);
+        const hasExplicitTasks = Array.isArray(found.tasks);
+        const rawTasks = hasExplicitTasks ? found.tasks : (def.tasks || []);
         const normalizedTasks: WorkPackageTask[] = rawTasks.map((t: any, tIdx: number) => {
           if (typeof t === 'string') {
             return {
@@ -224,9 +225,9 @@ export default function WorkPackagesManagementPage() {
 
   const currentWp = workPackages[selectedWpIndex] || workPackages[0];
 
-  // Add Image to current WP
-  const handleAddImage = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Upload Snapshot directly to the Website & Database
+  const handleUploadSnapshot = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!newImageUrl.trim()) {
       setFormError('Please upload an image or provide an image URL');
       return;
@@ -253,26 +254,44 @@ export default function WorkPackagesManagementPage() {
 
     setWorkPackages(updatedWps);
 
-    // Reset Form
+    // Reset Form fields
     setNewImageUrl('');
     setNewImageCaption('');
     setNewImageDate('');
 
-    showToast(`Snapshot added to ${targetWp.id}. Click "Save Work Packages" to persist changes!`, 'info');
+    // Persist immediately to backend database
+    setSaving(true);
+    try {
+      await updateSiteSetting('work_packages', updatedWps);
+      showToast(`Snapshot uploaded and published to ${targetWp.id} gallery!`, 'success');
+    } catch (err: any) {
+      showToast(`Upload failed: ${err?.message || 'Database error'}`, 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  // Remove Image from current WP
-  const handleRemoveImage = (imgId: string) => {
+  // Remove Snapshot and immediately persist to database (permanently deletes, never resurrects)
+  const handleRemoveImage = async (imgId: string) => {
     const updatedWps = [...workPackages];
     const targetWp = { ...updatedWps[selectedWpIndex] };
     targetWp.current_state_images = (targetWp.current_state_images || []).filter((img) => img.id !== imgId);
     updatedWps[selectedWpIndex] = targetWp;
     setWorkPackages(updatedWps);
-    showToast('Snapshot removed from local list. Click "Save Work Packages" to publish.', 'info');
+
+    setSaving(true);
+    try {
+      await updateSiteSetting('work_packages', updatedWps);
+      showToast(`Snapshot deleted and removed from the website.`, 'success');
+    } catch (err: any) {
+      showToast(`Delete failed: ${err?.message || 'Database error'}`, 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  // Reorder Images
-  const handleMoveImage = (fromIdx: number, toIdx: number) => {
+  // Reorder Images and persist
+  const handleMoveImage = async (fromIdx: number, toIdx: number) => {
     const updatedWps = [...workPackages];
     const targetWp = { ...updatedWps[selectedWpIndex] };
     const imgs = [...(targetWp.current_state_images || [])];
@@ -283,6 +302,12 @@ export default function WorkPackagesManagementPage() {
     targetWp.current_state_images = imgs;
     updatedWps[selectedWpIndex] = targetWp;
     setWorkPackages(updatedWps);
+
+    try {
+      await updateSiteSetting('work_packages', updatedWps);
+    } catch (err) {
+      // non-blocking
+    }
   };
 
   // Update image caption or date
@@ -296,56 +321,14 @@ export default function WorkPackagesManagementPage() {
     setWorkPackages(updatedWps);
   };
 
-  // Save / Upload Snapshots directly to the Website
-  const handleSaveSnapshots = async () => {
-    let dataToSave = workPackages;
-
-    // Auto-commit any unsaved input in the snapshot upload form
-    if (newImageUrl.trim() && newImageCaption.trim()) {
-      const newImageItem: WorkPackageStateImage = {
-        id: `img-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-        url: newImageUrl.trim(),
-        caption: newImageCaption.trim(),
-        date: newImageDate.trim() || new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-      };
-
-      const updatedWps = [...workPackages];
-      const targetWp = { ...updatedWps[selectedWpIndex] };
-      const currentImages = targetWp.current_state_images ? [...targetWp.current_state_images] : [];
-      targetWp.current_state_images = [newImageItem, ...currentImages];
-      updatedWps[selectedWpIndex] = targetWp;
-      setWorkPackages(updatedWps);
-      dataToSave = updatedWps;
-
-      setNewImageUrl('');
-      setNewImageCaption('');
-      setNewImageDate('');
-      setFormError(null);
-    } else if (newImageUrl.trim() && !newImageCaption.trim()) {
-      setFormError('Please provide a caption before saving this snapshot');
-      return;
-    }
-
-    setSaving(true);
-    try {
-      await updateSiteSetting('work_packages', dataToSave);
-      showToast(`Snapshots for ${currentWp.id} successfully uploaded and saved to the website!`, 'success');
-    } catch (err: any) {
-      showToast(`Save failed: ${err?.message || 'Database error'}`, 'error');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // Add Task to current WP
-  const handleAddTask = (e?: React.FormEvent) => {
+  // Add Task to current WP and persist
+  const handleAddTask = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!newTaskLabel.trim()) return;
 
     const updatedWps = [...workPackages];
     const targetWp = { ...updatedWps[selectedWpIndex] };
     const currentTasks = targetWp.tasks ? [...targetWp.tasks] : [];
-
     const autoId = newTaskId.trim() || `T${targetWp.number || selectedWpIndex + 1}.${currentTasks.length + 1}`;
 
     const newTask: WorkPackageTask = {
@@ -360,11 +343,20 @@ export default function WorkPackagesManagementPage() {
 
     setNewTaskLabel('');
     setNewTaskId('');
-    showToast(`Task "${autoId}" added to ${targetWp.id}. Click "Save Work Packages" to persist.`, 'info');
+
+    setSaving(true);
+    try {
+      await updateSiteSetting('work_packages', updatedWps);
+      showToast(`Task "${autoId}" added to ${targetWp.id}!`, 'success');
+    } catch (err: any) {
+      showToast(`Failed to add task: ${err?.message || 'Database error'}`, 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  // Toggle Task Completion
-  const handleToggleTask = (taskId: string) => {
+  // Toggle Task Completion and persist
+  const handleToggleTask = async (taskId: string) => {
     const updatedWps = [...workPackages];
     const targetWp = { ...updatedWps[selectedWpIndex] };
     const currentTasks = targetWp.tasks ? [...targetWp.tasks] : [];
@@ -376,7 +368,12 @@ export default function WorkPackagesManagementPage() {
     setWorkPackages(updatedWps);
 
     const changed = targetWp.tasks.find((t) => t.id === taskId);
-    showToast(`Task "${taskId}" marked as ${changed?.completed ? 'Done' : 'In Progress'}.`, 'info');
+    try {
+      await updateSiteSetting('work_packages', updatedWps);
+      showToast(`Task "${taskId}" marked as ${changed?.completed ? 'Done' : 'In Progress'}.`, 'success');
+    } catch (err: any) {
+      showToast(`Failed to update task: ${err?.message || 'Database error'}`, 'error');
+    }
   };
 
   // Update Task Field (id or label)
@@ -392,18 +389,24 @@ export default function WorkPackagesManagementPage() {
     setWorkPackages(updatedWps);
   };
 
-  // Remove Task
-  const handleRemoveTask = (taskId: string) => {
+  // Remove Task and persist
+  const handleRemoveTask = async (taskId: string) => {
     const updatedWps = [...workPackages];
     const targetWp = { ...updatedWps[selectedWpIndex] };
     targetWp.tasks = (targetWp.tasks || []).filter((t) => t.id !== taskId);
     updatedWps[selectedWpIndex] = targetWp;
     setWorkPackages(updatedWps);
-    showToast(`Task "${taskId}" removed. Click "Save Work Packages" to publish.`, 'info');
+
+    try {
+      await updateSiteSetting('work_packages', updatedWps);
+      showToast(`Task "${taskId}" removed from ${targetWp.id}.`, 'info');
+    } catch (err: any) {
+      showToast(`Failed to delete task: ${err?.message || 'Database error'}`, 'error');
+    }
   };
 
-  // Move Task Reorder
-  const handleMoveTask = (fromIdx: number, toIdx: number) => {
+  // Move Task Reorder and persist
+  const handleMoveTask = async (fromIdx: number, toIdx: number) => {
     const updatedWps = [...workPackages];
     const targetWp = { ...updatedWps[selectedWpIndex] };
     const tasks = [...(targetWp.tasks || [])];
@@ -414,6 +417,12 @@ export default function WorkPackagesManagementPage() {
     targetWp.tasks = tasks;
     updatedWps[selectedWpIndex] = targetWp;
     setWorkPackages(updatedWps);
+
+    try {
+      await updateSiteSetting('work_packages', updatedWps);
+    } catch (err) {
+      // non-blocking
+    }
   };
 
   // Update general WP details
@@ -426,12 +435,12 @@ export default function WorkPackagesManagementPage() {
     setWorkPackages(updatedWps);
   };
 
-  // Save to DB
+  // Save All Changes to DB
   const handleSaveAll = async () => {
     setSaving(true);
     try {
       await updateSiteSetting('work_packages', workPackages);
-      showToast('Work packages and progress snapshots saved successfully to database!', 'success');
+      showToast('All work package changes successfully published to the website!', 'success');
     } catch (err: any) {
       showToast(`Save failed: ${err?.message || 'Database error'}`, 'error');
     } finally {
@@ -481,8 +490,17 @@ export default function WorkPackagesManagementPage() {
             disabled={saving}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0c2461] hover:bg-[#0c2461]/90 text-white font-semibold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50"
           >
-            <Save className="w-4 h-4" />
-            <span>{saving ? 'Saving to DB...' : 'Save Work Packages'}</span>
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Saving to DB...</span>
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                <span>Save All Changes</span>
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -611,21 +629,12 @@ export default function WorkPackagesManagementPage() {
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-[#0c2461] font-semibold text-xs">
                 {currentWp.current_state_images?.length || 0} Snapshots Attached
               </span>
-              <button
-                type="button"
-                onClick={handleSaveSnapshots}
-                disabled={saving}
-                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#0c2461] hover:bg-[#0c2461]/90 text-white font-semibold text-xs shadow-xs transition-all cursor-pointer disabled:opacity-50"
-              >
-                <Save className="w-3.5 h-3.5" />
-                <span>{saving ? 'Uploading...' : 'Save Changes'}</span>
-              </button>
             </div>
           </div>
 
           {/* Form to Add New State Image */}
           <form
-            onSubmit={handleAddImage}
+            onSubmit={handleUploadSnapshot}
             className="p-5 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50/40 border border-slate-200/90 space-y-4"
           >
             <div className="flex items-center justify-between">
@@ -691,22 +700,23 @@ export default function WorkPackagesManagementPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2.5 pt-1">
+            <div className="flex items-center justify-end pt-1">
               <button
                 type="submit"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#0c2461] font-semibold text-xs transition-colors cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add Snapshot to List</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveSnapshots}
                 disabled={saving}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0c2461] hover:bg-[#0c2461]/90 text-white font-semibold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0c2461] hover:bg-[#0c2461]/90 text-white font-semibold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50"
               >
-                <Save className="w-3.5 h-3.5" />
-                <span>{saving ? 'Uploading to Website...' : 'Save Changes'}</span>
+                {saving ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Uploading to Website...</span>
+                  </>
+                ) : (
+                  <>
+                    <UploadCloud className="w-3.5 h-3.5" />
+                    <span>Upload Snapshot to Website</span>
+                  </>
+                )}
               </button>
             </div>
           </form>
@@ -820,19 +830,13 @@ export default function WorkPackagesManagementPage() {
             )}
 
             {currentWp.current_state_images && currentWp.current_state_images.length > 0 && (
-              <div className="pt-2 flex items-center justify-between border-t border-slate-100">
-                <span className="text-xs text-slate-500">
-                  {currentWp.current_state_images.length} snapshots will be visible in the public {currentWp.id} gallery.
+              <div className="pt-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-t border-slate-100 text-xs text-slate-500">
+                <span>
+                  {currentWp.current_state_images.length} snapshot{currentWp.current_state_images.length === 1 ? '' : 's'} live in the public {currentWp.id} gallery.
                 </span>
-                <button
-                  type="button"
-                  onClick={handleSaveSnapshots}
-                  disabled={saving}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0c2461] hover:bg-[#0c2461]/90 text-white font-semibold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50"
-                >
-                  <Save className="w-3.5 h-3.5" />
-                  <span>{saving ? 'Uploading to Website...' : 'Save Changes'}</span>
-                </button>
+                <span className="text-[11px] text-slate-400">
+                  Caption edits are saved with the top &quot;Save All Changes&quot; button.
+                </span>
               </div>
             )}
           </div>
@@ -850,14 +854,6 @@ export default function WorkPackagesManagementPage() {
                 Edit title, status, lead investigator, and core research objectives.
               </p>
             </div>
-            <button
-              onClick={handleSaveAll}
-              disabled={saving}
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#0c2461] font-semibold text-xs transition-colors cursor-pointer self-start sm:self-auto"
-            >
-              <Save className="w-3.5 h-3.5" />
-              <span>{saving ? 'Saving...' : 'Save All Changes'}</span>
-            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -931,15 +927,6 @@ export default function WorkPackagesManagementPage() {
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-[#0c2461] font-semibold text-xs self-start sm:self-auto">
                 {(currentWp.tasks || []).filter((t) => t.completed).length} of {(currentWp.tasks || []).length} Completed
               </span>
-              <button
-                type="button"
-                onClick={handleSaveAll}
-                disabled={saving}
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#0c2461] font-semibold text-xs transition-colors cursor-pointer disabled:opacity-50"
-              >
-                <Save className="w-3.5 h-3.5" />
-                <span>{saving ? 'Saving...' : 'Save All Changes'}</span>
-              </button>
             </div>
           </div>
 
