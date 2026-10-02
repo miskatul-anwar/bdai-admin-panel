@@ -56,22 +56,38 @@ export default function ImageUpload({
       const headers: Record<string, string> = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      // Attempt upload to Rust Backend Cloudinary endpoint
-      const res = await fetch(`${API_BASE_URL}/upload`, {
-        method: 'POST',
-        headers,
-        credentials: 'include',
-        body: formData,
-      });
+      // Attempt upload to Rust Backend Cloudinary endpoint with retry on 429
+      let res: Response | null = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        res = await fetch(`${API_BASE_URL}/upload`, {
+          method: 'POST',
+          headers,
+          credentials: 'include',
+          body: formData,
+        });
 
-      if (res.ok) {
+        if (res.status === 429 && attempt < 2) {
+          const retryAfter = res.headers.get('retry-after');
+          const waitMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : (attempt + 1) * 800;
+          await new Promise((r) => setTimeout(r, waitMs));
+          continue;
+        }
+        break;
+      }
+
+      if (res && res.ok) {
         const data = await res.json();
         const uploadedUrl = data.secure_url || data.url;
         onChange(uploadedUrl);
-      } else {
+      } else if (res) {
         const errData = await res.json().catch(() => ({}));
-        const msg = errData.error || errData.message || `Upload failed (Status ${res.status})`;
+        let msg = errData.error || errData.message || `Upload failed (Status ${res.status})`;
+        if (res.status === 429) {
+          msg = 'Rate limit reached. Please wait a moment and try uploading again.';
+        }
         setError(msg);
+      } else {
+        setError('Upload failed: no response from server');
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Upload failed due to network error';

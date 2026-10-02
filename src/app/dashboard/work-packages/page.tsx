@@ -142,6 +142,35 @@ const DEFAULT_WORK_PACKAGES: WorkPackageItem[] = [
   },
 ];
 
+function formatDateString(isoDate: string): string {
+  if (!isoDate) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
+    const [y, m, d] = isoDate.split('-').map(Number);
+    const dateObj = new Date(y, m - 1, d);
+    if (!isNaN(dateObj.getTime())) {
+      return dateObj.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    }
+  }
+  return isoDate;
+}
+
+function parseToDateInput(val: string | undefined): string {
+  if (!val) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+  const parsed = new Date(val);
+  if (!isNaN(parsed.getTime())) {
+    const y = parsed.getFullYear();
+    const m = String(parsed.getMonth() + 1).padStart(2, '0');
+    const d = String(parsed.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  return '';
+}
+
 export default function WorkPackagesManagementPage() {
   const { settings, updateSiteSetting, refreshBackendData, showToast } = useAdmin();
 
@@ -243,7 +272,7 @@ export default function WorkPackagesManagementPage() {
       id: `img-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       url: newImageUrl.trim(),
       caption: newImageCaption.trim(),
-      date: newImageDate.trim() || new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+      date: newImageDate.trim() || formatDateString(new Date().toISOString().split('T')[0]),
     };
 
     const updatedWps = [...workPackages];
@@ -436,7 +465,7 @@ export default function WorkPackagesManagementPage() {
         id: `img-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         url: newImageUrl.trim(),
         caption: newImageCaption.trim(),
-        date: newImageDate.trim() || new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        date: newImageDate.trim() || formatDateString(new Date().toISOString().split('T')[0]),
       };
 
       const updatedWps = [...workPackages];
@@ -705,16 +734,45 @@ export default function WorkPackagesManagementPage() {
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                    Milestone / Date (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={newImageDate}
-                    onChange={(e) => setNewImageDate(e.target.value)}
-                    placeholder="e.g. October 2026 or 2026-10-02"
-                    className="w-full text-xs px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0c2461]"
-                  />
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[11px] font-semibold text-slate-700 flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-[#0c2461]" />
+                      <span>Milestone / Date (Optional)</span>
+                    </label>
+                    {newImageDate ? (
+                      <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+                        {newImageDate}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-slate-400">
+                        Default: Today
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative flex items-center">
+                    <input
+                      type="date"
+                      value={parseToDateInput(newImageDate)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setNewImageDate(val ? formatDateString(val) : '');
+                      }}
+                      className="w-full text-xs px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0c2461] cursor-pointer"
+                    />
+                    {newImageDate && (
+                      <button
+                        type="button"
+                        onClick={() => setNewImageDate('')}
+                        title="Clear date"
+                        className="absolute right-8 text-slate-400 hover:text-slate-600 text-xs px-1 cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Select a milestone date from the calendar picker
+                  </p>
                 </div>
               </div>
             </div>
@@ -820,17 +878,27 @@ export default function WorkPackagesManagementPage() {
                       />
                     </div>
 
-                    {/* Editable Date */}
+                    {/* Editable Date Picker */}
                     <div>
-                      <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
-                        Date / Milestone
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
+                          <Calendar className="w-3 h-3 text-[#0c2461]" />
+                          <span>Date / Milestone</span>
+                        </label>
+                        {img.date && (
+                          <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded normal-case">
+                            {img.date}
+                          </span>
+                        )}
+                      </div>
                       <input
-                        type="text"
-                        value={img.date || ''}
-                        onChange={(e) => handleUpdateImageField(img.id, 'date', e.target.value)}
-                        placeholder="e.g. October 2026"
-                        className="w-full text-xs px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#0c2461]"
+                        type="date"
+                        value={parseToDateInput(img.date)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          handleUpdateImageField(img.id, 'date', val ? formatDateString(val) : '');
+                        }}
+                        className="w-full text-xs px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#0c2461] cursor-pointer"
                       />
                     </div>
                   </div>

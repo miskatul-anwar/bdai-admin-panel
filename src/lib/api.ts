@@ -27,25 +27,41 @@ async function apiRequest<T>(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-    credentials: 'include', // Automatically passes and receives secure HTTP-only cookies
-  });
+  const maxRetries = 2;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+      credentials: 'include', // Automatically passes and receives secure HTTP-only cookies
+    });
 
-  if (!res.ok) {
-    let errorMsg = `HTTP Error ${res.status}`;
-    try {
-      const errorJson = await res.json();
-      if (errorJson.error) errorMsg = errorJson.error;
-      else if (errorJson.message) errorMsg = errorJson.message;
-    } catch {
-      // ignore
+    // If rate limited (429), retry with backoff or Retry-After header
+    if (res.status === 429 && attempt < maxRetries) {
+      const retryAfter = res.headers.get('retry-after');
+      const waitMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : (attempt + 1) * 750;
+      await new Promise((r) => setTimeout(r, waitMs));
+      continue;
     }
-    throw new Error(errorMsg);
+
+    if (!res.ok) {
+      let errorMsg = `HTTP Error ${res.status}`;
+      try {
+        const errorJson = await res.json();
+        if (errorJson.error) errorMsg = errorJson.error;
+        else if (errorJson.message) errorMsg = errorJson.message;
+      } catch {
+        // ignore
+      }
+      if (res.status === 429) {
+        errorMsg = 'Rate limit reached. Please wait a moment and try again.';
+      }
+      throw new Error(errorMsg);
+    }
+
+    return res.json();
   }
 
-  return res.json();
+  throw new Error('Request failed after retries');
 }
 
 export const api = {
