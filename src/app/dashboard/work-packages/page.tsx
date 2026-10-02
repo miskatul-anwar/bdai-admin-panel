@@ -225,8 +225,8 @@ export default function WorkPackagesManagementPage() {
 
   const currentWp = workPackages[selectedWpIndex] || workPackages[0];
 
-  // Upload Snapshot directly to the Website & Database
-  const handleUploadSnapshot = async (e?: React.FormEvent) => {
+  // Add Snapshot to current WP list
+  const handleAddSnapshot = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!newImageUrl.trim()) {
       setFormError('Please upload an image or provide an image URL');
@@ -259,16 +259,7 @@ export default function WorkPackagesManagementPage() {
     setNewImageCaption('');
     setNewImageDate('');
 
-    // Persist immediately to backend database
-    setSaving(true);
-    try {
-      await updateSiteSetting('work_packages', updatedWps);
-      showToast(`Snapshot uploaded and published to ${targetWp.id} gallery!`, 'success');
-    } catch (err: any) {
-      showToast(`Upload failed: ${err?.message || 'Database error'}`, 'error');
-    } finally {
-      setSaving(false);
-    }
+    showToast(`Snapshot added to list. Click "Save Changes" at the top to publish.`, 'info');
   };
 
   // Remove Snapshot and immediately persist to database (permanently deletes, never resurrects)
@@ -435,12 +426,40 @@ export default function WorkPackagesManagementPage() {
     setWorkPackages(updatedWps);
   };
 
-  // Save All Changes to DB
-  const handleSaveAll = async () => {
+  // Save Changes to DB (The ONLY Save Changes button on the page)
+  const handleSaveChanges = async () => {
+    let dataToSave = workPackages;
+
+    // If there is any unsaved snapshot in the upload form, auto-commit it first
+    if (newImageUrl.trim() && newImageCaption.trim()) {
+      const newImageItem: WorkPackageStateImage = {
+        id: `img-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        url: newImageUrl.trim(),
+        caption: newImageCaption.trim(),
+        date: newImageDate.trim() || new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+      };
+
+      const updatedWps = [...workPackages];
+      const targetWp = { ...updatedWps[selectedWpIndex] };
+      const currentImages = targetWp.current_state_images ? [...targetWp.current_state_images] : [];
+      targetWp.current_state_images = [newImageItem, ...currentImages];
+      updatedWps[selectedWpIndex] = targetWp;
+      setWorkPackages(updatedWps);
+      dataToSave = updatedWps;
+
+      setNewImageUrl('');
+      setNewImageCaption('');
+      setNewImageDate('');
+      setFormError(null);
+    } else if (newImageUrl.trim() && !newImageCaption.trim()) {
+      setFormError('Please provide a caption before saving this snapshot');
+      return;
+    }
+
     setSaving(true);
     try {
-      await updateSiteSetting('work_packages', workPackages);
-      showToast('All work package changes successfully published to the website!', 'success');
+      await updateSiteSetting('work_packages', dataToSave);
+      showToast('Changes saved and published to the website!', 'success');
     } catch (err: any) {
       showToast(`Save failed: ${err?.message || 'Database error'}`, 'error');
     } finally {
@@ -456,8 +475,8 @@ export default function WorkPackagesManagementPage() {
 
   return (
     <div className="space-y-6 max-w-6xl pb-20">
-      {/* Page Title & Global Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Page Title & Global Actions (Sticky Header with the ONLY Save Changes button) */}
+      <div className="sticky top-0 z-30 bg-slate-100/95 backdrop-blur-md py-3 -mx-4 px-4 sm:-mx-6 sm:px-6 border-b border-slate-200/70 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-2xl bg-[#0c2461] flex items-center justify-center text-white shadow-sm shrink-0">
             <Package className="w-6 h-6" />
@@ -478,7 +497,7 @@ export default function WorkPackagesManagementPage() {
         <div className="flex items-center gap-2.5 self-start sm:self-auto">
           <button
             onClick={() => refreshBackendData(true)}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-200/80 hover:bg-slate-300/80 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
             title="Reload live data from database"
           >
             <RefreshCw className="w-3.5 h-3.5" />
@@ -486,19 +505,19 @@ export default function WorkPackagesManagementPage() {
           </button>
 
           <button
-            onClick={handleSaveAll}
+            onClick={handleSaveChanges}
             disabled={saving}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0c2461] hover:bg-[#0c2461]/90 text-white font-semibold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-[#0c2461] hover:bg-[#0c2461]/90 text-white font-semibold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50"
           >
             {saving ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Saving to DB...</span>
+                <span>Saving Changes...</span>
               </>
             ) : (
               <>
                 <Save className="w-4 h-4" />
-                <span>Save All Changes</span>
+                <span>Save Changes</span>
               </>
             )}
           </button>
@@ -634,7 +653,7 @@ export default function WorkPackagesManagementPage() {
 
           {/* Form to Add New State Image */}
           <form
-            onSubmit={handleUploadSnapshot}
+            onSubmit={handleAddSnapshot}
             className="p-5 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50/40 border border-slate-200/90 space-y-4"
           >
             <div className="flex items-center justify-between">
@@ -703,20 +722,10 @@ export default function WorkPackagesManagementPage() {
             <div className="flex items-center justify-end pt-1">
               <button
                 type="submit"
-                disabled={saving}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0c2461] hover:bg-[#0c2461]/90 text-white font-semibold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#0c2461] font-semibold text-xs transition-colors cursor-pointer"
               >
-                {saving ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>Uploading to Website...</span>
-                  </>
-                ) : (
-                  <>
-                    <UploadCloud className="w-3.5 h-3.5" />
-                    <span>Upload Snapshot to Website</span>
-                  </>
-                )}
+                <Plus className="w-3.5 h-3.5 text-blue-600" />
+                <span>Add Snapshot to List</span>
               </button>
             </div>
           </form>
@@ -835,7 +844,7 @@ export default function WorkPackagesManagementPage() {
                   {currentWp.current_state_images.length} snapshot{currentWp.current_state_images.length === 1 ? '' : 's'} live in the public {currentWp.id} gallery.
                 </span>
                 <span className="text-[11px] text-slate-400">
-                  Caption edits are saved with the top &quot;Save All Changes&quot; button.
+                  Caption edits are published with the &quot;Save Changes&quot; button at the top.
                 </span>
               </div>
             )}
