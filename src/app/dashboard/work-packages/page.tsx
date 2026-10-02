@@ -296,6 +296,47 @@ export default function WorkPackagesManagementPage() {
     setWorkPackages(updatedWps);
   };
 
+  // Save / Upload Snapshots directly to the Website
+  const handleSaveSnapshots = async () => {
+    let dataToSave = workPackages;
+
+    // Auto-commit any unsaved input in the snapshot upload form
+    if (newImageUrl.trim() && newImageCaption.trim()) {
+      const newImageItem: WorkPackageStateImage = {
+        id: `img-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        url: newImageUrl.trim(),
+        caption: newImageCaption.trim(),
+        date: newImageDate.trim() || new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+      };
+
+      const updatedWps = [...workPackages];
+      const targetWp = { ...updatedWps[selectedWpIndex] };
+      const currentImages = targetWp.current_state_images ? [...targetWp.current_state_images] : [];
+      targetWp.current_state_images = [newImageItem, ...currentImages];
+      updatedWps[selectedWpIndex] = targetWp;
+      setWorkPackages(updatedWps);
+      dataToSave = updatedWps;
+
+      setNewImageUrl('');
+      setNewImageCaption('');
+      setNewImageDate('');
+      setFormError(null);
+    } else if (newImageUrl.trim() && !newImageCaption.trim()) {
+      setFormError('Please provide a caption before saving this snapshot');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await updateSiteSetting('work_packages', dataToSave);
+      showToast(`Snapshots for ${currentWp.id} successfully uploaded and saved to the website!`, 'success');
+    } catch (err: any) {
+      showToast(`Save failed: ${err?.message || 'Database error'}`, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Add Task to current WP
   const handleAddTask = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -566,9 +607,20 @@ export default function WorkPackagesManagementPage() {
                 Upload photos documenting the real-time implementation state, equipment, meetings, or research breakthroughs.
               </p>
             </div>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-[#0c2461] font-semibold text-xs self-start sm:self-auto">
-              {currentWp.current_state_images?.length || 0} Snapshots Attached
-            </span>
+            <div className="flex items-center gap-2.5 self-start sm:self-auto">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-[#0c2461] font-semibold text-xs">
+                {currentWp.current_state_images?.length || 0} Snapshots Attached
+              </span>
+              <button
+                type="button"
+                onClick={handleSaveSnapshots}
+                disabled={saving}
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#0c2461] hover:bg-[#0c2461]/90 text-white font-semibold text-xs shadow-xs transition-all cursor-pointer disabled:opacity-50"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>{saving ? 'Uploading...' : 'Save Changes'}</span>
+              </button>
+            </div>
           </div>
 
           {/* Form to Add New State Image */}
@@ -639,13 +691,22 @@ export default function WorkPackagesManagementPage() {
               </div>
             </div>
 
-            <div className="flex justify-end pt-1">
+            <div className="flex items-center justify-end gap-2.5 pt-1">
               <button
                 type="submit"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0c2461] hover:bg-[#0c2461]/90 text-white font-semibold text-xs shadow-sm transition-all cursor-pointer"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#0c2461] font-semibold text-xs transition-colors cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Add Snapshot to {currentWp.id}</span>
+                <span>Add Snapshot to List</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveSnapshots}
+                disabled={saving}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0c2461] hover:bg-[#0c2461]/90 text-white font-semibold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>{saving ? 'Uploading to Website...' : 'Save Changes'}</span>
               </button>
             </div>
           </form>
@@ -755,6 +816,23 @@ export default function WorkPackagesManagementPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {currentWp.current_state_images && currentWp.current_state_images.length > 0 && (
+              <div className="pt-2 flex items-center justify-between border-t border-slate-100">
+                <span className="text-xs text-slate-500">
+                  {currentWp.current_state_images.length} snapshots will be visible in the public {currentWp.id} gallery.
+                </span>
+                <button
+                  type="button"
+                  onClick={handleSaveSnapshots}
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0c2461] hover:bg-[#0c2461]/90 text-white font-semibold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>{saving ? 'Uploading to Website...' : 'Save Changes'}</span>
+                </button>
               </div>
             )}
           </div>
