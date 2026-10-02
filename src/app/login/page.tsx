@@ -5,7 +5,6 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAdmin } from '@/lib/store';
 import { api } from '@/lib/api';
-import { dbAuthenticate } from '@/lib/supabase-db';
 import {
   Lock,
   User,
@@ -33,19 +32,10 @@ export default function LoginPage() {
     setErrorMsg(null);
 
     try {
-      let userObj: any = null;
-      let jwtToken: string | undefined = undefined;
-
-      // 1. Authenticate via Axum Rust Backend to receive signed cryptographic JWT
-      try {
-        const authData = await api.login(username.trim(), password);
-        jwtToken = authData.access_token || authData.token;
-        userObj = authData.user;
-      } catch (backendErr: any) {
-        console.warn('Backend login endpoint response/offline, attempting direct DB authentication:', backendErr?.message);
-        // Fallback for network resilience: verify against Supabase PostgreSQL
-        userObj = await dbAuthenticate(username.trim(), password);
-      }
+      // Authenticate via Axum Rust Backend API (/api/auth/login)
+      const authData = await api.login(username.trim(), password);
+      const jwtToken = authData.access_token || authData.token;
+      const userObj = authData.user;
 
       if (!userObj) {
         throw new Error('Invalid username or password');
@@ -55,8 +45,8 @@ export default function LoginPage() {
       showToast(`Welcome back, ${userObj.name}!`, 'success');
       router.replace('/dashboard');
     } catch (err: any) {
-      console.warn('Authentication failed:', err?.message || err);
-      setErrorMsg('Invalid username or password. Please verify your credentials.');
+      console.warn('Authentication failed via Axum backend:', err?.message || err);
+      setErrorMsg(err?.message || 'Invalid username or password. Please verify your credentials.');
     } finally {
       setIsLoading(false);
     }

@@ -140,3 +140,21 @@ export interface EventItem {
   updatedAt?: string;
 }
 
+export interface WorkPackageStateImage {
+  id: string;
+  url: string;
+  caption: string;
+  date?: string;
+}
+
+export interface WorkPackageItem {
+  id: string;
+  number?: number;
+  title: string;
+  lead?: string;
+  status?: string;
+  objective: string;
+  highlights?: string[];
+  tasks?: Array<{ id: string; label: string } | string>;
+  current_state_images?: WorkPackageStateImage[];
+}

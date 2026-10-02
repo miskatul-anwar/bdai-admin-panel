@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useAdmin } from '@/lib/store';
 import { api } from '@/lib/api';
@@ -801,14 +802,23 @@ function SettingsPageContent() {
                 Modify work package titles, lead investigators, objectives, milestones, and task deliverables.
               </p>
             </div>
-            <button
-              onClick={() => handleSave('work_packages', wpData)}
-              disabled={saving === 'work_packages'}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0c2461] hover:bg-[#0c2461]/90 text-white font-semibold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50"
-            >
-              <Save className="w-3.5 h-3.5" />
-              <span>{saving === 'work_packages' ? 'Saving to DB...' : 'Save Work Packages'}</span>
-            </button>
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <Link
+                href="/dashboard/work-packages"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#0c2461] font-semibold text-xs transition-colors cursor-pointer"
+              >
+                <span>Upload State Photos &amp; Manage</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+              <button
+                onClick={() => handleSave('work_packages', wpData)}
+                disabled={saving === 'work_packages'}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0c2461] hover:bg-[#0c2461]/90 text-white font-semibold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>{saving === 'work_packages' ? 'Saving to DB...' : 'Save Work Packages'}</span>
+              </button>
+            </div>
           </div>
 
           <div className="space-y-4">
@@ -818,6 +828,13 @@ function SettingsPageContent() {
                   <span className="text-xs font-bold text-[#0c2461] uppercase tracking-wider">
                     {wp.id || `WP${idx + 1}`}: {wp.title || 'Untitled'}
                   </span>
+                  <Link
+                    href="/dashboard/work-packages"
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-800"
+                  >
+                    <span>{wp.current_state_images?.length || 0} state snapshots</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </Link>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">

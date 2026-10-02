@@ -6,7 +6,7 @@
 import { getCookie } from './cookies';
 
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+  process.env.NEXT_PUBLIC_API_URL || 'https://bdai-backend.onrender.com/api';
 
 async function apiRequest<T>(
   endpoint: string,
@@ -14,7 +14,7 @@ async function apiRequest<T>(
 ): Promise<T> {
   let token = typeof window !== 'undefined' ? localStorage.getItem('bdai_auth_token') : null;
   if (!token) {
-    token = getCookie('bdai_access_token');
+    token = getCookie('bdai_access_token') || getCookie('access_token');
   }
 
   const headers: Record<string, string> = {
@@ -38,6 +38,7 @@ async function apiRequest<T>(
     try {
       const errorJson = await res.json();
       if (errorJson.error) errorMsg = errorJson.error;
+      else if (errorJson.message) errorMsg = errorJson.message;
     } catch {
       // ignore
     }
@@ -96,12 +97,29 @@ export const api = {
   createUser: (userData: any) =>
     apiRequest<any>('/users', {
       method: 'POST',
-      body: JSON.stringify(userData),
+      body: JSON.stringify({
+        name: userData.name,
+        username: userData.username || undefined,
+        email: userData.email,
+        password: userData.password || 'admin123',
+        role: userData.role || 'Moderator',
+        avatar: userData.avatar || '/team/miskat.jpg',
+        department: userData.department || 'Department of CSE, University of Chittagong',
+      }),
     }),
   updateUser: (id: string, userData: any) =>
     apiRequest<any>(`/users/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(userData),
+      body: JSON.stringify({
+        name: userData.name,
+        username: userData.username,
+        email: userData.email,
+        password: userData.password,
+        role: userData.role,
+        avatar: userData.avatar,
+        department: userData.department,
+        status: userData.status,
+      }),
     }),
   deleteUser: (id: string) =>
     apiRequest<any>(`/users/${id}`, {
@@ -113,12 +131,36 @@ export const api = {
   createTeamMember: (memberData: any) =>
     apiRequest<any>('/team', {
       method: 'POST',
-      body: JSON.stringify(memberData),
+      body: JSON.stringify({
+        name: memberData.name,
+        designation: memberData.designation,
+        role: memberData.role || null,
+        category: memberData.category || null,
+        institution: memberData.institution || 'Department of Computer Science and Engineering, University of Chittagong',
+        email: memberData.email || null,
+        bio: memberData.bio || null,
+        image: memberData.image || '/team/miskat.jpg',
+        scholar_url: memberData.scholar_url || memberData.scholarUrl || null,
+        linkedin_url: memberData.linkedin_url || memberData.linkedinUrl || null,
+        display_order: memberData.display_order ?? memberData.order ?? 0,
+      }),
     }),
   updateTeamMember: (id: string, memberData: any) =>
     apiRequest<any>(`/team/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(memberData),
+      body: JSON.stringify({
+        name: memberData.name,
+        designation: memberData.designation,
+        role: memberData.role,
+        category: memberData.category,
+        institution: memberData.institution,
+        email: memberData.email,
+        bio: memberData.bio,
+        image: memberData.image,
+        scholar_url: memberData.scholar_url !== undefined ? memberData.scholar_url : memberData.scholarUrl,
+        linkedin_url: memberData.linkedin_url !== undefined ? memberData.linkedin_url : memberData.linkedinUrl,
+        display_order: memberData.display_order !== undefined ? memberData.display_order : memberData.order,
+      }),
     }),
   deleteTeamMember: (id: string) =>
     apiRequest<any>(`/team/${id}`, {
@@ -133,12 +175,34 @@ export const api = {
   createNews: (newsData: any) =>
     apiRequest<any>('/news', {
       method: 'POST',
-      body: JSON.stringify(newsData),
+      body: JSON.stringify({
+        title: newsData.title,
+        slug: newsData.slug || newsData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+        excerpt: newsData.excerpt || '',
+        content: newsData.content || '',
+        category: newsData.category || 'news',
+        publish_date: newsData.publish_date || newsData.publishDate || new Date().toISOString().split('T')[0],
+        author: newsData.author || 'BIKE Lab',
+        status: newsData.status || 'published',
+        featured: newsData.featured ?? false,
+        tags: Array.isArray(newsData.tags) ? newsData.tags : [],
+      }),
     }),
   updateNews: (id: string, newsData: any) =>
     apiRequest<any>(`/news/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(newsData),
+      body: JSON.stringify({
+        title: newsData.title,
+        slug: newsData.slug,
+        excerpt: newsData.excerpt,
+        content: newsData.content,
+        category: newsData.category,
+        publish_date: newsData.publish_date || newsData.publishDate,
+        author: newsData.author,
+        status: newsData.status,
+        featured: newsData.featured,
+        tags: newsData.tags,
+      }),
     }),
   deleteNews: (id: string) =>
     apiRequest<any>(`/news/${id}`, {
@@ -153,12 +217,34 @@ export const api = {
   createVacancy: (vacData: any) =>
     apiRequest<any>('/vacancies', {
       method: 'POST',
-      body: JSON.stringify(vacData),
+      body: JSON.stringify({
+        title: vacData.title,
+        department: vacData.department || 'Department of Computer Science and Engineering',
+        work_package: vacData.work_package || vacData.workPackage || 'WP1',
+        notice_type: vacData.notice_type || vacData.type || 'Notice',
+        location: vacData.location || 'Chattogram, Bangladesh',
+        deadline: vacData.deadline || new Date().toISOString().split('T')[0],
+        status: vacData.status || 'open',
+        description: vacData.description || '',
+        requirements: Array.isArray(vacData.requirements) ? vacData.requirements : [],
+        applicant_count: vacData.applicant_count ?? vacData.applicantCount ?? 0,
+      }),
     }),
   updateVacancy: (id: string, vacData: any) =>
     apiRequest<any>(`/vacancies/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(vacData),
+      body: JSON.stringify({
+        title: vacData.title,
+        department: vacData.department,
+        work_package: vacData.work_package || vacData.workPackage,
+        notice_type: vacData.notice_type || vacData.type,
+        location: vacData.location,
+        deadline: vacData.deadline,
+        status: vacData.status,
+        description: vacData.description,
+        requirements: vacData.requirements,
+        applicant_count: vacData.applicant_count ?? vacData.applicantCount,
+      }),
     }),
   deleteVacancy: (id: string) =>
     apiRequest<any>(`/vacancies/${id}`, {
@@ -170,12 +256,29 @@ export const api = {
   createObjective: (objData: any) =>
     apiRequest<any>('/objectives', {
       method: 'POST',
-      body: JSON.stringify(objData),
+      body: JSON.stringify({
+        id: objData.id,
+        title: objData.title,
+        details: objData.details || '',
+        researcher: objData.researcher || '',
+        sector: objData.sector || '',
+        status: objData.status || 'in-progress',
+        progress: typeof objData.progress === 'number' ? objData.progress : 0,
+        deliverables: typeof objData.deliverables === 'number' ? objData.deliverables : 0,
+      }),
     }),
   updateObjective: (id: string, objData: any) =>
     apiRequest<any>(`/objectives/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(objData),
+      body: JSON.stringify({
+        title: objData.title,
+        details: objData.details,
+        researcher: objData.researcher,
+        sector: objData.sector,
+        status: objData.status,
+        progress: typeof objData.progress === 'number' ? objData.progress : undefined,
+        deliverables: typeof objData.deliverables === 'number' ? objData.deliverables : undefined,
+      }),
     }),
   deleteObjective: (id: string) =>
     apiRequest<any>(`/objectives/${id}`, {
@@ -218,12 +321,28 @@ export const api = {
   createTool: (toolData: any) =>
     apiRequest<any>('/tools', {
       method: 'POST',
-      body: JSON.stringify(toolData),
+      body: JSON.stringify({
+        ...toolData,
+        display_order: toolData.display_order ?? toolData.order ?? 0,
+        paper_url: toolData.paper_url || toolData.paperUrl || null,
+        source_url: toolData.source_url || toolData.sourceUrl || null,
+        platform_url: toolData.platform_url || toolData.platformUrl || null,
+        video_url: toolData.video_url || toolData.videoUrl || null,
+        image_url: toolData.image_url || toolData.imageUrl || null,
+      }),
     }),
   updateTool: (id: string, toolData: any) =>
     apiRequest<any>(`/tools/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(toolData),
+      body: JSON.stringify({
+        ...toolData,
+        display_order: toolData.display_order !== undefined ? toolData.display_order : toolData.order,
+        paper_url: toolData.paper_url !== undefined ? toolData.paper_url : toolData.paperUrl,
+        source_url: toolData.source_url !== undefined ? toolData.source_url : toolData.sourceUrl,
+        platform_url: toolData.platform_url !== undefined ? toolData.platform_url : toolData.platformUrl,
+        video_url: toolData.video_url !== undefined ? toolData.video_url : toolData.videoUrl,
+        image_url: toolData.image_url !== undefined ? toolData.image_url : toolData.imageUrl,
+      }),
     }),
   deleteTool: (id: string) =>
     apiRequest<any>(`/tools/${id}`, {
@@ -236,12 +355,19 @@ export const api = {
   createVideo: (videoData: any) =>
     apiRequest<any>('/videos', {
       method: 'POST',
-      body: JSON.stringify(videoData),
+      body: JSON.stringify({
+        ...videoData,
+        posted_at: videoData.posted_at || videoData.postedAt || new Date().toISOString(),
+        order: videoData.order ?? 0,
+      }),
     }),
   updateVideo: (id: string, videoData: any) =>
     apiRequest<any>(`/videos/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(videoData),
+      body: JSON.stringify({
+        ...videoData,
+        posted_at: videoData.posted_at !== undefined ? videoData.posted_at : videoData.postedAt,
+      }),
     }),
   deleteVideo: (id: string) =>
     apiRequest<any>(`/videos/${id}`, {
@@ -273,6 +399,7 @@ export const api = {
   uploadImage: (file: File, folder = 'bdai') => uploadImage(file, folder),
 };
 
+
 export async function uploadImage(file: File, folder = 'bdai'): Promise<string> {
   const formData = new FormData();
   formData.append('file', file);
@@ -302,3 +429,4 @@ export async function uploadImage(file: File, folder = 'bdai'): Promise<string> 
   return data.secure_url || data.url;
 }
 
+export const apiClient = api;

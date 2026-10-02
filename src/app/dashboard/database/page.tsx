@@ -107,7 +107,7 @@ export default function DatabaseConsolePage() {
     setIsRefreshing(true);
     await refreshBackendData(true);
     setIsRefreshing(false);
-    showToast('Database records refreshed from Supabase', 'success');
+    showToast('Database records refreshed via Axum backend', 'success');
   };
 
   const handleDeleteRow = async (id: string, nameOrTitle: string) => {

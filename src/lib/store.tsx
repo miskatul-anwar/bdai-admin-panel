@@ -25,44 +25,6 @@ import {
   INITIAL_VIDEOS,
   INITIAL_EVENTS,
 } from './demo-data';
-import {
-  dbGetTeam,
-  dbAddTeamMember,
-  dbUpdateTeamMember,
-  dbDeleteTeamMember,
-  dbGetNews,
-  dbAddNews,
-  dbUpdateNews,
-  dbDeleteNews,
-  dbGetVacancies,
-  dbAddVacancy,
-  dbUpdateVacancy,
-  dbDeleteVacancy,
-  dbGetObjectives,
-  dbAddObjective,
-  dbUpdateObjective,
-  dbDeleteObjective,
-  dbGetUsers,
-  dbAddUser,
-  dbUpdateUser,
-  dbDeleteUser,
-  dbGetActivities,
-  dbLogActivity,
-  dbGetSettings,
-  dbUpdateSetting,
-  dbGetTools,
-  dbAddTool,
-  dbUpdateTool,
-  dbDeleteTool,
-  dbGetVideos,
-  dbAddVideo,
-  dbUpdateVideo,
-  dbDeleteVideo,
-  dbGetEvents,
-  dbAddEvent,
-  dbUpdateEvent,
-  dbDeleteEvent,
-} from './supabase-db';
 import { setCookie, deleteCookie } from './cookies';
 import { api } from './api';
 import { getEventTimestamp } from './date-utils';
@@ -455,12 +417,11 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     const updated = [newAct, ...activities.slice(0, 19)];
     setActivities(updated);
     localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(updated));
-    dbLogActivity(action, entity, targetName, user?.name || 'Admin').catch(() => {});
   };
 
-  // Sync data from live Rust Backend / Supabase PostgreSQL with smart caching
+  // Sync data from live Rust Axum Backend with smart caching
   const refreshBackendData = useCallback(async (force = false) => {
-    // If not forced and local cache is populated and fresh, do NOT exhaust the database with extra calls
+    // If not forced and local cache is populated and fresh, avoid redundant calls
     if (!force && typeof window !== 'undefined') {
       try {
         const lastSync = localStorage.getItem(STORAGE_KEYS.CACHE_TIMESTAMP);
@@ -469,7 +430,6 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
         if (hasCachedTeam && hasCachedNews && lastSync) {
           const age = Date.now() - Number(lastSync);
           if (age < CACHE_TTL_MS) {
-            // Cache is fresh: avoid redundant method calls to Supabase
             setIsLiveBackend(true);
             return;
           }
@@ -481,16 +441,16 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       const [teamRes, newsRes, vacRes, objRes, usersRes, actRes, settingsRes, toolsRes, videosRes, eventsRes] = await Promise.allSettled([
-        dbGetTeam(),
-        dbGetNews(),
-        dbGetVacancies(),
-        dbGetObjectives(),
-        dbGetUsers(),
-        dbGetActivities(),
-        dbGetSettings(),
-        dbGetTools(),
-        dbGetVideos(),
-        dbGetEvents(),
+        api.getTeam(),
+        api.getNews(),
+        api.getVacancies(),
+        api.getObjectives(),
+        api.getUsers(),
+        api.getActivities(),
+        api.getSettings(),
+        api.getTools(),
+        api.getVideos(),
+        api.getEvents(),
       ]);
 
       let backendActive = false;
@@ -680,7 +640,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setUsers((prev) => [...prev, newUser]);
 
     try {
-      const res = await dbAddUser({
+      const res = await api.createUser({
         name: userData.name,
         username: userData.username,
         email: userData.email,
@@ -707,7 +667,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...userData } : u)));
 
     try {
-      const res = await dbUpdateUser(id, userData);
+      const res = await api.updateUser(id, userData);
       setUsers((prev) => prev.map((u) => (u.id === id ? normalizeUser(res) : u)));
       showToast('User record updated in database', 'success');
     } catch {
@@ -735,7 +695,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setUsers((prev) => prev.filter((u) => u.id !== id));
 
     try {
-      await dbDeleteUser(id);
+      await api.deleteUser(id);
       showToast('User removed from database', 'info');
     } catch {
       showToast('User removed locally', 'info');
@@ -761,7 +721,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setTeam((prev) => [optimisticMember, ...prev]);
 
     try {
-      const res = await dbAddTeamMember({
+      const res = await api.createTeamMember({
         name: memberData.name,
         designation: memberData.designation,
         role: memberData.role || null,
@@ -790,7 +750,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setTeam((prev) => prev.map((m) => (m.id === id ? { ...m, ...memberData } : m)));
 
     try {
-      const res = await dbUpdateTeamMember(id, {
+      const res = await api.updateTeamMember(id, {
         name: memberData.name,
         designation: memberData.designation,
         role: memberData.role,
@@ -823,7 +783,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setTeam((prev) => prev.filter((m) => m.id !== id));
 
     try {
-      await dbDeleteTeamMember(id);
+      await api.deleteTeamMember(id);
       showToast('Employee removed from database', 'info');
     } catch {
       showToast('Employee removed locally', 'info');
@@ -842,7 +802,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setNews((prev) => [newArticle, ...prev]);
 
     try {
-      const res = await dbAddNews({
+      const res = await api.createNews({
         title: newsData.title,
         slug: newsData.slug,
         excerpt: newsData.excerpt,
@@ -870,7 +830,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setNews((prev) => prev.map((n) => (n.id === id ? { ...n, ...newsData } : n)));
 
     try {
-      const res = await dbUpdateNews(id, {
+      const res = await api.updateNews(id, {
         title: newsData.title,
         slug: newsData.slug,
         excerpt: newsData.excerpt,
@@ -899,7 +859,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setNews((prev) => prev.filter((n) => n.id !== id));
 
     try {
-      await dbDeleteNews(id);
+      await api.deleteNews(id);
       showToast('News article deleted from database', 'info');
     } catch {
       showToast('News article deleted locally', 'info');
@@ -918,7 +878,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setVacancies((prev) => [newVac, ...prev]);
 
     try {
-      const res = await dbAddVacancy({
+      const res = await api.createVacancy({
         title: vacData.title,
         department: vacData.department,
         work_package: vacData.workPackage,
@@ -946,7 +906,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setVacancies((prev) => prev.map((v) => (v.id === id ? { ...v, ...vacData } : v)));
 
     try {
-      const res = await dbUpdateVacancy(id, {
+      const res = await api.updateVacancy(id, {
         title: vacData.title,
         department: vacData.department,
         work_package: vacData.workPackage,
@@ -975,7 +935,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setVacancies((prev) => prev.filter((v) => v.id !== id));
 
     try {
-      await dbDeleteVacancy(id);
+      await api.deleteVacancy(id);
       showToast('Vacancy notice removed from database', 'info');
     } catch {
       showToast('Vacancy notice removed locally', 'info');
@@ -992,7 +952,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setObjectives((prev) => prev.map((o) => (o.id === id ? { ...o, ...objData } : o)));
 
     try {
-      const res = await dbUpdateObjective(id, objData);
+      const res = await api.updateObjective(id, objData);
       setObjectives((prev) => prev.map((o) => (o.id === id ? (res as ResearchObjective) : o)));
       showToast(`Objective ${id} updated in database`, 'success');
     } catch {
@@ -1009,7 +969,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setObjectives((prev) => [...prev, objData]);
 
     try {
-      const res = await dbAddObjective(objData);
+      const res = await api.createObjective(objData);
       setObjectives((prev) => prev.map((o) => (o.id === objData.id ? (res as ResearchObjective) : o)));
       showToast(`Objective ${objData.id} created in database`, 'success');
     } catch {
@@ -1026,7 +986,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setObjectives((prev) => prev.filter((o) => o.id !== id));
 
     try {
-      await dbDeleteObjective(id);
+      await api.deleteObjective(id);
       showToast(`Objective ${id} deleted from database`, 'info');
     } catch {
       showToast(`Objective ${id} deleted locally`, 'info');
@@ -1058,25 +1018,22 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setTools((prev) => [...prev, optimisticTool].sort((a, b) => a.order - b.order));
 
     try {
-      await dbAddTool(
-        {
-          id: slug,
-          title: toolData.title,
-          subtitle: toolData.subtitle,
-          description: toolData.description,
-          abstract_text: toolData.abstract,
-          paper_url: toolData.paperUrl,
-          source_url: toolData.sourceUrl,
-          platform_url: toolData.platformUrl,
-          video_url: toolData.videoUrl,
-          image_url: toolData.imageUrl,
-          authors: toolData.authors,
-          features: toolData.features,
-          display_order: toolData.order,
-          badge: toolData.badge,
-        },
-        user?.name || 'Admin'
-      );
+      await api.createTool({
+        id: slug,
+        title: toolData.title,
+        subtitle: toolData.subtitle,
+        description: toolData.description,
+        abstract_text: toolData.abstract,
+        paper_url: toolData.paperUrl,
+        source_url: toolData.sourceUrl,
+        platform_url: toolData.platformUrl,
+        video_url: toolData.videoUrl,
+        image_url: toolData.imageUrl,
+        authors: toolData.authors,
+        features: toolData.features,
+        display_order: toolData.order,
+        badge: toolData.badge,
+      });
       showToast(`Added tool "${toolData.title}" (synced to database)`, 'success');
     } catch {
       showToast(`Added tool "${toolData.title}" (cached locally)`, 'info');
@@ -1096,25 +1053,21 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     );
 
     try {
-      await dbUpdateTool(
-        id,
-        {
-          title: toolData.title,
-          subtitle: toolData.subtitle,
-          description: toolData.description,
-          abstract_text: toolData.abstract,
-          paper_url: toolData.paperUrl,
-          source_url: toolData.sourceUrl,
-          platform_url: toolData.platformUrl,
-          video_url: toolData.videoUrl,
-          image_url: toolData.imageUrl,
-          authors: toolData.authors,
-          features: toolData.features,
-          display_order: toolData.order,
-          badge: toolData.badge,
-        },
-        user?.name || 'Admin'
-      );
+      await api.updateTool(id, {
+        title: toolData.title,
+        subtitle: toolData.subtitle,
+        description: toolData.description,
+        abstract_text: toolData.abstract,
+        paper_url: toolData.paperUrl,
+        source_url: toolData.sourceUrl,
+        platform_url: toolData.platformUrl,
+        video_url: toolData.videoUrl,
+        image_url: toolData.imageUrl,
+        authors: toolData.authors,
+        features: toolData.features,
+        display_order: toolData.order,
+        badge: toolData.badge,
+      });
       showToast(`Updated tool "${toolData.title || id}" (synced to database)`, 'success');
     } catch {
       showToast(`Updated tool "${toolData.title || id}" (cached locally)`, 'info');
@@ -1131,7 +1084,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setTools((prev) => prev.filter((t) => t.id !== id));
 
     try {
-      await dbDeleteTool(id, user?.name || 'Admin');
+      await api.deleteTool(id);
       showToast(`Tool "${target?.title || id}" deleted from database`, 'info');
     } catch {
       showToast(`Tool "${target?.title || id}" deleted locally`, 'info');
@@ -1162,18 +1115,15 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setVideos((prev) => [...prev, optimisticVideo].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
 
     try {
-      await dbAddVideo(
-        {
-          id,
-          title: videoData.title,
-          url: videoData.url,
-          thumbnail: videoData.thumbnail,
-          description: videoData.description,
-          posted_at: videoData.postedAt,
-          order: videoData.order,
-        },
-        user?.name || 'Admin'
-      );
+      await api.createVideo({
+        id,
+        title: videoData.title,
+        url: videoData.url,
+        thumbnail: videoData.thumbnail,
+        description: videoData.description,
+        posted_at: videoData.postedAt,
+        order: videoData.order,
+      });
       showToast(`Added video "${videoData.title}" (synced to database)`, 'success');
     } catch {
       showToast(`Added video "${videoData.title}" (cached locally)`, 'info');
@@ -1193,18 +1143,14 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     );
 
     try {
-      await dbUpdateVideo(
-        id,
-        {
-          title: videoData.title,
-          url: videoData.url,
-          thumbnail: videoData.thumbnail,
-          description: videoData.description,
-          posted_at: videoData.postedAt,
-          order: videoData.order,
-        },
-        user?.name || 'Admin'
-      );
+      await api.updateVideo(id, {
+        title: videoData.title,
+        url: videoData.url,
+        thumbnail: videoData.thumbnail,
+        description: videoData.description,
+        posted_at: videoData.postedAt,
+        order: videoData.order,
+      });
       showToast(`Updated video "${videoData.title || id}" (synced to database)`, 'success');
     } catch {
       showToast(`Updated video "${videoData.title || id}" (cached locally)`, 'info');
@@ -1221,7 +1167,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     setVideos((prev) => prev.filter((v) => v.id !== id));
 
     try {
-      await dbDeleteVideo(id, user?.name || 'Admin');
+      await api.deleteVideo(id);
       showToast(`Video "${target?.title || id}" deleted from database`, 'info');
     } catch {
       showToast(`Video "${target?.title || id}" deleted locally`, 'info');
@@ -1253,23 +1199,20 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      await dbAddEvent(
-        {
-          id: newId,
-          title: eventData.title,
-          date: eventData.date,
-          date_iso: eventData.date_iso,
-          status: eventData.status,
-          category: eventData.category,
-          location: eventData.location,
-          description: eventData.description,
-          banner: eventData.banner,
-          gallery: eventData.gallery,
-          order: 1,
-          is_visible: eventData.is_visible !== undefined ? eventData.is_visible : true,
-        },
-        user?.name || 'Admin'
-      );
+      await api.createEvent({
+        id: newId,
+        title: eventData.title,
+        date: eventData.date,
+        date_iso: eventData.date_iso,
+        status: eventData.status,
+        category: eventData.category,
+        location: eventData.location,
+        description: eventData.description,
+        banner: eventData.banner,
+        gallery: eventData.gallery,
+        order: 1,
+        is_visible: eventData.is_visible !== undefined ? eventData.is_visible : true,
+      });
       showToast(`Added event "${eventData.title}" (synced to database)`, 'success');
     } catch {
       showToast(`Added event "${eventData.title}" (cached locally)`, 'info');
@@ -1293,22 +1236,18 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      await dbUpdateEvent(
-        id,
-        {
-          title: eventData.title,
-          date: eventData.date,
-          date_iso: eventData.date_iso,
-          status: eventData.status,
-          category: eventData.category,
-          location: eventData.location,
-          description: eventData.description,
-          banner: eventData.banner,
-          gallery: eventData.gallery,
-          is_visible: eventData.is_visible,
-        },
-        user?.name || 'Admin'
-      );
+      await api.updateEvent(id, {
+        title: eventData.title,
+        date: eventData.date,
+        date_iso: eventData.date_iso,
+        status: eventData.status,
+        category: eventData.category,
+        location: eventData.location,
+        description: eventData.description,
+        banner: eventData.banner,
+        gallery: eventData.gallery,
+        is_visible: eventData.is_visible,
+      });
       showToast(`Updated event "${eventData.title || id}" (synced to database)`, 'success');
     } catch {
       showToast(`Updated event "${eventData.title || id}" (cached locally)`, 'info');
@@ -1334,7 +1273,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      await dbDeleteEvent(targetId, user?.name || 'Admin');
+      await api.deleteEvent(targetId);
       showToast(`Event "${target?.title || id}" deleted from database`, 'info');
     } catch {
       showToast(`Event "${target?.title || id}" deleted locally`, 'info');
@@ -1344,7 +1283,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
 
   const updateSiteSetting = async (id: string, data: any) => {
     try {
-      await dbUpdateSetting(id, data, user?.name || 'Admin');
+      await api.updateSetting(id, data);
       setSettings((prev) => {
         const next = { ...prev, [id]: data };
         if (typeof window !== 'undefined') {
