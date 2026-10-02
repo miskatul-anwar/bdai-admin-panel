@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAdmin } from '@/lib/store';
-import { WorkPackageItem, WorkPackageStateImage } from '@/types';
+import { WorkPackageItem, WorkPackageStateImage, WorkPackageTask } from '@/types';
 import ImageUpload from '@/components/ui/ImageUpload';
 import Modal from '@/components/ui/Modal';
 import { apiClient } from '@/lib/api';
@@ -21,6 +21,9 @@ import {
   AlertCircle,
   Target,
   User,
+  CheckCircle2,
+  Circle,
+  ListTodo,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -39,12 +42,12 @@ const DEFAULT_WORK_PACKAGES: WorkPackageItem[] = [
       'UPS power protection, backup systems, and IT maintenance procedures',
     ],
     tasks: [
-      { id: 'T1.1', label: 'Design and fit out lab interior space (partitioning, lighting, electrical points).' },
-      { id: 'T1.2', label: 'Procure and install servers and storage hardware.' },
-      { id: 'T1.3', label: 'Set up local area network (LAN), internet connectivity, and firewall/security.' },
-      { id: 'T1.4', label: 'Procure and configure researcher workstations and peripherals.' },
-      { id: 'T1.5', label: 'Install furnishings and ergonomic workspace equipment.' },
-      { id: 'T1.6', label: 'Set up backup, power protection (UPS), and IT maintenance procedures.' },
+      { id: 'T1.1', label: 'Design and fit out lab interior space (partitioning, lighting, electrical points).', completed: true },
+      { id: 'T1.2', label: 'Procure and install servers and storage hardware.', completed: true },
+      { id: 'T1.3', label: 'Set up local area network (LAN), internet connectivity, and firewall/security.', completed: true },
+      { id: 'T1.4', label: 'Procure and configure researcher workstations and peripherals.', completed: false },
+      { id: 'T1.5', label: 'Install furnishings and ergonomic workspace equipment.', completed: false },
+      { id: 'T1.6', label: 'Set up backup, power protection (UPS), and IT maintenance procedures.', completed: false },
     ],
     current_state_images: [
       {
@@ -69,11 +72,11 @@ const DEFAULT_WORK_PACKAGES: WorkPackageItem[] = [
       'Data sharing agreements and access governance per sector',
     ],
     tasks: [
-      { id: 'T2.1', label: 'Identify and inventory data sources per sector.' },
-      { id: 'T2.2', label: 'Establish data sharing agreements and access permissions.' },
-      { id: 'T2.3', label: 'Acquire and pre-process sectoral datasets.' },
-      { id: 'T2.4', label: 'Convert and serialise data to RDF and other target formats.' },
-      { id: 'T2.5', label: 'Validate and document datasets for completeness and accuracy.' },
+      { id: 'T2.1', label: 'Identify and inventory data sources per sector.', completed: true },
+      { id: 'T2.2', label: 'Establish data sharing agreements and access permissions.', completed: true },
+      { id: 'T2.3', label: 'Acquire and pre-process sectoral datasets.', completed: false },
+      { id: 'T2.4', label: 'Convert and serialise data to RDF and other target formats.', completed: false },
+      { id: 'T2.5', label: 'Validate and document datasets for completeness and accuracy.', completed: false },
     ],
     current_state_images: [],
   },
@@ -91,11 +94,11 @@ const DEFAULT_WORK_PACKAGES: WorkPackageItem[] = [
       'Digital Twin linkages via simulation and data models',
     ],
     tasks: [
-      { id: 'T3.1', label: 'Develop or adopt domain ontologies per sector (SOCIO-ECO KG, EDU KG, ENV KG, TOUR KG, HEALTH KG, AGRI KG).' },
-      { id: 'T3.2', label: 'Populate individual domain KGs with data from WP2.' },
-      { id: 'T3.3', label: 'Design and implement the Federation Layer meta-model for cross-domain alignment.' },
-      { id: 'T3.4', label: 'Build federated SPARQL query engine across all domain KGs.' },
-      { id: 'T3.5', label: 'Develop simulation, system, and data models and Digital Twin linkages.' },
+      { id: 'T3.1', label: 'Develop or adopt domain ontologies per sector (SOCIO-ECO KG, EDU KG, ENV KG, TOUR KG, HEALTH KG, AGRI KG).', completed: true },
+      { id: 'T3.2', label: 'Populate individual domain KGs with data from WP2.', completed: true },
+      { id: 'T3.3', label: 'Design and implement the Federation Layer meta-model for cross-domain alignment.', completed: false },
+      { id: 'T3.4', label: 'Build federated SPARQL query engine across all domain KGs.', completed: false },
+      { id: 'T3.5', label: 'Develop simulation, system, and data models and Digital Twin linkages.', completed: false },
     ],
     current_state_images: [],
   },
@@ -113,11 +116,11 @@ const DEFAULT_WORK_PACKAGES: WorkPackageItem[] = [
       'Interactive dashboards with cross-domain KPIs, visualizations, and decision support',
     ],
     tasks: [
-      { id: 'T4.1', label: 'Design cross-sectoral analytical query framework spanning all six domain KGs.' },
-      { id: 'T4.2', label: 'Implement federated SPARQL and graph-based analytical pipelines.' },
-      { id: 'T4.3', label: 'Integrate LLMs for natural language query interpretation and answer generation.' },
-      { id: 'T4.4', label: 'Build interactive analytical dashboards with cross-domain key performance indicators and visualizations.' },
-      { id: 'T4.5', label: 'Validate analytical outputs against ground truth data across sectors.' },
+      { id: 'T4.1', label: 'Design cross-sectoral analytical query framework spanning all six domain KGs.', completed: true },
+      { id: 'T4.2', label: 'Implement federated SPARQL and graph-based analytical pipelines.', completed: true },
+      { id: 'T4.3', label: 'Integrate LLMs for natural language query interpretation and answer generation.', completed: false },
+      { id: 'T4.4', label: 'Build interactive analytical dashboards with cross-domain key performance indicators and visualizations.', completed: false },
+      { id: 'T4.5', label: 'Validate analytical outputs against ground truth data across sectors.', completed: false },
     ],
     current_state_images: [],
   },
@@ -135,10 +138,10 @@ const DEFAULT_WORK_PACKAGES: WorkPackageItem[] = [
       'KG-grounded reasoning with feedback-driven refinement for improved response quality',
     ],
     tasks: [
-      { id: 'T5.1', label: 'Design conversational NLI architecture integrating LLMs with the federated KG backend.' },
-      { id: 'T5.2', label: 'Develop natural language to SPARQL/graph query translation module.' },
-      { id: 'T5.3', label: 'Build context-aware answer generation using KG-grounded LLM reasoning.' },
-      { id: 'T5.4', label: 'Iteratively refine NLI based on user feedback and evaluation results.' },
+      { id: 'T5.1', label: 'Design conversational NLI architecture integrating LLMs with the federated KG backend.', completed: true },
+      { id: 'T5.2', label: 'Develop natural language to SPARQL/graph query translation module.', completed: false },
+      { id: 'T5.3', label: 'Build context-aware answer generation using KG-grounded LLM reasoning.', completed: false },
+      { id: 'T5.4', label: 'Iteratively refine NLI based on user feedback and evaluation results.', completed: false },
     ],
     current_state_images: [],
   },
@@ -157,6 +160,10 @@ export default function WorkPackagesManagementPage() {
   const [newImageCaption, setNewImageCaption] = useState('');
   const [newImageDate, setNewImageDate] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
+
+  // New Task Form State
+  const [newTaskLabel, setNewTaskLabel] = useState('');
+  const [newTaskId, setNewTaskId] = useState('');
 
   // Initialize from settings
   useEffect(() => {
@@ -182,6 +189,22 @@ export default function WorkPackagesManagementPage() {
             }))
           : (def.current_state_images || []);
 
+        const rawTasks = Array.isArray(found.tasks) && found.tasks.length > 0 ? found.tasks : (def.tasks || []);
+        const normalizedTasks: WorkPackageTask[] = rawTasks.map((t: any, tIdx: number) => {
+          if (typeof t === 'string') {
+            return {
+              id: `T${found.number || def.number || idx + 1}.${tIdx + 1}`,
+              label: t,
+              completed: false,
+            };
+          }
+          return {
+            id: t.id || `T${found.number || def.number || idx + 1}.${tIdx + 1}`,
+            label: t.label || t.title || '',
+            completed: Boolean(t.completed),
+          };
+        });
+
         return {
           id: found.id || def.id,
           number: found.number || def.number,
@@ -190,7 +213,7 @@ export default function WorkPackagesManagementPage() {
           status: found.status || def.status,
           objective: found.objective || def.objective,
           highlights: Array.isArray(found.highlights) && found.highlights.length > 0 ? found.highlights : def.highlights,
-          tasks: Array.isArray(found.tasks) && found.tasks.length > 0 ? found.tasks : def.tasks,
+          tasks: normalizedTasks,
           current_state_images: stateImages,
         };
       });
@@ -269,6 +292,85 @@ export default function WorkPackagesManagementPage() {
     targetWp.current_state_images = (targetWp.current_state_images || []).map((img) =>
       img.id === imgId ? { ...img, [field]: val } : img
     );
+    updatedWps[selectedWpIndex] = targetWp;
+    setWorkPackages(updatedWps);
+  };
+
+  // Add Task to current WP
+  const handleAddTask = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!newTaskLabel.trim()) return;
+
+    const updatedWps = [...workPackages];
+    const targetWp = { ...updatedWps[selectedWpIndex] };
+    const currentTasks = targetWp.tasks ? [...targetWp.tasks] : [];
+
+    const autoId = newTaskId.trim() || `T${targetWp.number || selectedWpIndex + 1}.${currentTasks.length + 1}`;
+
+    const newTask: WorkPackageTask = {
+      id: autoId,
+      label: newTaskLabel.trim(),
+      completed: false,
+    };
+
+    targetWp.tasks = [...currentTasks, newTask];
+    updatedWps[selectedWpIndex] = targetWp;
+    setWorkPackages(updatedWps);
+
+    setNewTaskLabel('');
+    setNewTaskId('');
+    showToast(`Task "${autoId}" added to ${targetWp.id}. Click "Save Work Packages" to persist.`, 'info');
+  };
+
+  // Toggle Task Completion
+  const handleToggleTask = (taskId: string) => {
+    const updatedWps = [...workPackages];
+    const targetWp = { ...updatedWps[selectedWpIndex] };
+    const currentTasks = targetWp.tasks ? [...targetWp.tasks] : [];
+
+    targetWp.tasks = currentTasks.map((t) =>
+      t.id === taskId ? { ...t, completed: !t.completed } : t
+    );
+    updatedWps[selectedWpIndex] = targetWp;
+    setWorkPackages(updatedWps);
+
+    const changed = targetWp.tasks.find((t) => t.id === taskId);
+    showToast(`Task "${taskId}" marked as ${changed?.completed ? 'Done' : 'In Progress'}.`, 'info');
+  };
+
+  // Update Task Field (id or label)
+  const handleUpdateTask = (taskId: string, field: 'id' | 'label', val: string) => {
+    const updatedWps = [...workPackages];
+    const targetWp = { ...updatedWps[selectedWpIndex] };
+    const currentTasks = targetWp.tasks ? [...targetWp.tasks] : [];
+
+    targetWp.tasks = currentTasks.map((t) =>
+      t.id === taskId ? { ...t, [field]: val } : t
+    );
+    updatedWps[selectedWpIndex] = targetWp;
+    setWorkPackages(updatedWps);
+  };
+
+  // Remove Task
+  const handleRemoveTask = (taskId: string) => {
+    const updatedWps = [...workPackages];
+    const targetWp = { ...updatedWps[selectedWpIndex] };
+    targetWp.tasks = (targetWp.tasks || []).filter((t) => t.id !== taskId);
+    updatedWps[selectedWpIndex] = targetWp;
+    setWorkPackages(updatedWps);
+    showToast(`Task "${taskId}" removed. Click "Save Work Packages" to publish.`, 'info');
+  };
+
+  // Move Task Reorder
+  const handleMoveTask = (fromIdx: number, toIdx: number) => {
+    const updatedWps = [...workPackages];
+    const targetWp = { ...updatedWps[selectedWpIndex] };
+    const tasks = [...(targetWp.tasks || [])];
+    if (toIdx < 0 || toIdx >= tasks.length) return;
+
+    const [moved] = tasks.splice(fromIdx, 1);
+    tasks.splice(toIdx, 0, moved);
+    targetWp.tasks = tasks;
     updatedWps[selectedWpIndex] = targetWp;
     setWorkPackages(updatedWps);
   };
@@ -732,6 +834,195 @@ export default function WorkPackagesManagementPage() {
               onChange={(e) => handleUpdateWpField('objective', e.target.value)}
               className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0c2461]"
             />
+          </div>
+        </div>
+
+        {/* ── SECTION: WORK PACKAGE TASKS & CHECKLIST ───────────────── */}
+        <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-100 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100">
+            <div>
+              <h3 className="text-base font-bold text-[#0c2461] flex items-center gap-2">
+                <ListTodo className="w-4 h-4 text-blue-600" />
+                Actionable Tasks &amp; Milestones ({currentWp.id})
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Add, edit, reorder, and mark work package tasks as completed or in-progress.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-[#0c2461] font-semibold text-xs self-start sm:self-auto">
+                {(currentWp.tasks || []).filter((t) => t.completed).length} of {(currentWp.tasks || []).length} Completed
+              </span>
+              <button
+                type="button"
+                onClick={handleSaveAll}
+                disabled={saving}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#0c2461] font-semibold text-xs transition-colors cursor-pointer disabled:opacity-50"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>{saving ? 'Saving...' : 'Save All Changes'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Add Task Form */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleAddTask();
+            }}
+            className="p-4 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50/30 border border-slate-200/90 space-y-3"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-[#0c2461] flex items-center gap-1.5">
+                <Plus className="w-3.5 h-3.5 text-blue-600" />
+                Add New Task to {currentWp.id}
+              </span>
+              <span className="text-[11px] text-slate-500">Tasks are shown live on the public {currentWp.id} page</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+              <div className="sm:col-span-3">
+                <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+                  Task Code / ID
+                </label>
+                <input
+                  type="text"
+                  value={newTaskId}
+                  placeholder={`T${currentWp.number || selectedWpIndex + 1}.${(currentWp.tasks?.length || 0) + 1}`}
+                  onChange={(e) => setNewTaskId(e.target.value)}
+                  className="w-full text-xs font-mono font-bold px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0c2461]"
+                />
+              </div>
+
+              <div className="sm:col-span-9">
+                <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+                  Task Description &amp; Scope *
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newTaskLabel}
+                    placeholder="e.g. Procure and install specialized GPU servers and networking equipment."
+                    onChange={(e) => setNewTaskLabel(e.target.value)}
+                    className="flex-1 text-xs px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0c2461]"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!newTaskLabel.trim()}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0c2461] hover:bg-[#0c2461]/90 text-white font-semibold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Task</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+
+          {/* Tasks List */}
+          <div className="space-y-2.5">
+            {(!currentWp.tasks || currentWp.tasks.length === 0) ? (
+              <div className="p-8 text-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 space-y-1">
+                <ListTodo className="w-8 h-8 text-slate-300 mx-auto" />
+                <p className="text-xs font-semibold text-slate-600">No tasks defined yet for {currentWp.id}</p>
+                <p className="text-[11px] text-slate-400">Use the form above to add milestone tasks.</p>
+              </div>
+            ) : (
+              currentWp.tasks.map((task, tIdx) => (
+                <div
+                  key={task.id || tIdx}
+                  className={`flex flex-col sm:flex-row sm:items-center gap-2.5 p-3 rounded-xl border transition-all ${
+                    task.completed
+                      ? 'bg-emerald-50/50 border-emerald-200/80 text-emerald-950'
+                      : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 shadow-2xs'
+                  }`}
+                >
+                  {/* Toggle Checkbox Button */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleTask(task.id)}
+                      className="text-slate-400 hover:text-emerald-600 transition-colors cursor-pointer shrink-0"
+                      title={task.completed ? 'Mark as In Progress' : 'Mark as Done'}
+                    >
+                      {task.completed ? (
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                      ) : (
+                        <Circle className="w-5 h-5 text-slate-300 hover:text-slate-500" />
+                      )}
+                    </button>
+
+                    {/* Task ID Input / Pill */}
+                    <input
+                      type="text"
+                      value={task.id}
+                      onChange={(e) => handleUpdateTask(task.id, 'id', e.target.value)}
+                      className="w-16 text-center font-mono font-bold text-xs px-1.5 py-1 rounded-md bg-[#0c2461]/10 text-[#0c2461] border border-transparent focus:border-[#0c2461] focus:bg-white focus:outline-none"
+                      title="Click to edit task code"
+                    />
+                  </div>
+
+                  {/* Task Label Input */}
+                  <input
+                    type="text"
+                    value={task.label}
+                    onChange={(e) => handleUpdateTask(task.id, 'label', e.target.value)}
+                    className={`flex-1 text-xs px-2 py-1 bg-transparent border border-transparent hover:border-slate-200 focus:border-[#0c2461] focus:bg-white focus:outline-none rounded-lg transition-colors ${
+                      task.completed ? 'line-through text-slate-400 decoration-slate-300' : 'text-slate-800'
+                    }`}
+                    placeholder="Task description..."
+                  />
+
+                  {/* Controls: Status Badge, Reorder, Delete */}
+                  <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleTask(task.id)}
+                      className={`px-2 py-0.5 text-[10px] font-bold rounded-md uppercase tracking-wider cursor-pointer ${
+                        task.completed
+                          ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                          : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                      }`}
+                    >
+                      {task.completed ? 'Done' : 'In Progress'}
+                    </button>
+
+                    {/* Reorder Arrows */}
+                    <div className="flex items-center bg-slate-100 rounded-lg p-0.5 text-slate-600">
+                      <button
+                        type="button"
+                        disabled={tIdx === 0}
+                        onClick={() => handleMoveTask(tIdx, tIdx - 1)}
+                        className="p-1 hover:text-blue-600 disabled:opacity-30 cursor-pointer"
+                        title="Move Up"
+                      >
+                        <ChevronUp className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={tIdx === (currentWp.tasks?.length || 1) - 1}
+                        onClick={() => handleMoveTask(tIdx, tIdx + 1)}
+                        className="p-1 hover:text-blue-600 disabled:opacity-30 cursor-pointer"
+                        title="Move Down"
+                      >
+                        <ChevronDown className="w-3 h-3" />
+                      </button>
+                    </div>
+
+                    {/* Delete Task Button */}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTask(task.id)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                      title="Delete Task"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

@@ -154,6 +154,12 @@ export interface WorkPackageStateImage {
   date?: string;
 }
 
+export interface WorkPackageTask {
+  id: string;
+  label: string;
+  completed?: boolean;
+}
+
 export interface WorkPackageItem {
   id: string;
   number?: number;
@@ -162,6 +168,6 @@ export interface WorkPackageItem {
   status?: string;
   objective: string;
   highlights?: string[];
-  tasks?: Array<{ id: string; label: string } | string>;
+  tasks?: WorkPackageTask[];
   current_state_images?: WorkPackageStateImage[];
 }
